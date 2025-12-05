@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nl2graph"
+version = "0.1.0"
+description = "A LLM-driven framework for NL to query language on knowledge graph"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "tqdm",
+    "loguru",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

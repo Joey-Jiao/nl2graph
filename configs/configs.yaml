@@ -1,0 +1,39 @@
+log:
+  log_dir: "outputs/logs"
+  console_level: "INFO"
+  file_level: "DEBUG"
+  rotation: "200 MB"
+  retention: "14 days"
+
+llm:
+  openai:
+    gpt-4o-mini:
+      timeout: 60
+    gpt-4o:
+      timeout: 60
+  deepseek:
+    deepseek-chat:
+      timeout: 30
+      endpoint: https://api.deepseek.com
+    deepseek-reasoner:
+      timeout: 30
+      endpoint: https://api.deepseek.com
+
+templates:
+  prompts: "templates/prompts"
+  queries: "templates/queries"
+
+data:
+  metaqa:
+    raw: "data/metaqa/raw"
+    processed: "data/metaqa/processed"
+    result: "data/metaqa/result"
+    schema: "data/metaqa/schema.json"
+    connections:
+      cypher:
+        host: localhost
+        port: 7687
+        username: neo4j
+        password: MetaQANeo4j
+
+

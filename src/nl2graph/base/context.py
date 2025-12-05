@@ -1,0 +1,54 @@
+from pathlib import Path
+
+import punq
+
+from .configs import ConfigService
+from .log import LogService
+from .llm.service import LLMService
+from .templates.service import TemplateService
+from ..graph.service import GraphService
+from ..pipeline.service import PipelineService
+
+
+class ApplicationContext:
+    def __init__(self, contain: punq.Container):
+        self._container = contain
+
+    def resolve(self, cls):
+        return self._container.resolve(cls)
+
+    def register(self, *args, **kwargs):
+        return self._container.register(*args, **kwargs)
+
+
+def get_context(
+        config_dir: str = "configs",
+        env_path: str = ".env",
+) -> ApplicationContext:
+    container = punq.Container()
+
+    config_files = list(Path(config_dir).glob("*.yaml"))
+    config_service = ConfigService(config_dir=config_files, env_path=env_path)
+    container.register(ConfigService, instance=config_service)
+
+    log_service = LogService(config=config_service)
+    container.register(LogService, instance=log_service)
+
+    llm_service = LLMService(config=config_service)
+    container.register(LLMService, instance=llm_service)
+
+    template_service = TemplateService(config=config_service)
+    container.register(TemplateService, instance=template_service)
+
+    graph_service = GraphService(config=config_service)
+    container.register(GraphService, instance=graph_service)
+
+    pipeline_service = PipelineService(
+        config=config_service,
+        llm_service=llm_service,
+        template_service=template_service,
+        graph_service=graph_service,
+    )
+    container.register(PipelineService, instance=pipeline_service)
+
+    return ApplicationContext(container)
