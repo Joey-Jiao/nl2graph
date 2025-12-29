@@ -1,15 +1,14 @@
 from typing import List, Dict, Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class QueryResult(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     columns: List[str] = []
     rows: List[Dict[str, Any]] = []
     raw: Optional[Any] = None
-
-    class Config:
-        arbitrary_types_allowed = True
 
     @property
     def is_empty(self) -> bool:

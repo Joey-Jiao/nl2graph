@@ -23,17 +23,71 @@ templates:
   prompts: "templates/prompts"
   queries: "templates/queries"
 
+seq2seq:
+  model_name_or_path: "facebook/bart-base"
+  max_length: 512
+
+  inference:
+    batch_size: 32
+
+  training:
+    batch_size: 64
+    learning_rate: 3e-5
+    num_epochs: 100
+    early_stopping: 15
+    warmup_proportion: 0.1
+    gradient_accumulation_steps: 1
+    max_grad_norm: 1.0
+    weight_decay: 1e-5
+
+  checkpoints:
+    kqapro_sparql:
+      path: "models/checkpoints/kqapro_sparql"
+      dataset: "kqapro"
+      lang: "sparql"
+      ir_mode: "graphq"
+    kqapro_kopl:
+      path: "models/checkpoints/kqapro_kopl"
+      dataset: "kqapro"
+      lang: "kopl"
+      ir_mode: "graphq"
+    metaqa_cypher:
+      path: "models/checkpoints/metaqa_cypher"
+      dataset: "metaqa"
+      lang: "cypher"
+      ir_mode: "graphq"
+
 data:
+  base_dir: "data"
+
+  kqapro:
+    train:
+      raw: "data/kqapro/train/raw"
+      processed: "data/kqapro/train/processed"
+      config_sparql: "data/kqapro/train/raw/config_sparql.py"
+      config_kopl: "data/kqapro/train/raw/config_kopl.py"
+    eval:
+      raw: "data/kqapro/eval/raw"
+      processed: "data/kqapro/eval/processed"
+    results: "data/kqapro/results"
+
   metaqa:
-    raw: "data/metaqa/raw"
-    processed: "data/metaqa/processed"
-    result: "data/metaqa/result"
+    train:
+      raw: "data/metaqa/train/raw"
+      processed: "data/metaqa/train/processed"
+      config: "data/metaqa/train/raw/config.py"
+      shots:
+        1shot: "data/metaqa/train/processed/1shot"
+        3shot: "data/metaqa/train/processed/3shot"
+        5shot: "data/metaqa/train/processed/5shot"
+    eval:
+      raw: "data/metaqa/eval/raw"
+      processed: "data/metaqa/eval/processed"
+    results: "data/metaqa/results"
     schema: "data/metaqa/schema.json"
-    connections:
-      cypher:
-        host: localhost
-        port: 7687
-        username: neo4j
-        password: MetaQANeo4j
-
-
+    connection:
+      host: localhost
+      port: 7687
+      username: neo4j
+      password: MetaQANeo4j
+      database: neo4j

@@ -4,15 +4,16 @@ import punq
 
 from .configs import ConfigService
 from .log import LogService
+from .models.service import ModelService
 from .llm.service import LLMService
 from .templates.service import TemplateService
 from ..graph.service import GraphService
-from ..pipeline.service import PipelineService
+from ..eval import Scoring
 
 
 class ApplicationContext:
-    def __init__(self, contain: punq.Container):
-        self._container = contain
+    def __init__(self, container: punq.Container):
+        self._container = container
 
     def resolve(self, cls):
         return self._container.resolve(cls)
@@ -22,8 +23,8 @@ class ApplicationContext:
 
 
 def get_context(
-        config_dir: str = "configs",
-        env_path: str = ".env",
+    config_dir: str = "configs",
+    env_path: str = ".env",
 ) -> ApplicationContext:
     container = punq.Container()
 
@@ -40,15 +41,13 @@ def get_context(
     template_service = TemplateService(config=config_service)
     container.register(TemplateService, instance=template_service)
 
+    model_service = ModelService(config=config_service)
+    container.register(ModelService, instance=model_service)
+
     graph_service = GraphService(config=config_service)
     container.register(GraphService, instance=graph_service)
 
-    pipeline_service = PipelineService(
-        config=config_service,
-        llm_service=llm_service,
-        template_service=template_service,
-        graph_service=graph_service,
-    )
-    container.register(PipelineService, instance=pipeline_service)
+    scoring = Scoring()
+    container.register(Scoring, instance=scoring)
 
     return ApplicationContext(container)

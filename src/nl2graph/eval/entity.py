@@ -1,15 +1,16 @@
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class GenerationResult(BaseModel):
     query_raw: Optional[str] = None
-    query_processed: Optional[str] = None
+    query: Optional[str] = None
+    ir: Optional[str] = None
 
 
 class ExecutionResult(BaseModel):
-    answer: Optional[List[Any]] = None
+    result: Optional[List[Any]] = None
     success: bool = False
     error: Optional[str] = None
 
@@ -19,10 +20,10 @@ class EvaluationResult(BaseModel):
     f1: Optional[float] = None
     precision: Optional[float] = None
     recall: Optional[float] = None
-    hits_at_1: Optional[float] = None
 
 
 class RunResult(BaseModel):
+    method: Literal["llm", "seq2seq"]
     lang: str
     model: str
     gen: Optional[GenerationResult] = None
@@ -31,10 +32,17 @@ class RunResult(BaseModel):
 
 
 class Record(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     question: str
     answer: List[Any]
     hop: Optional[int] = None
     runs: Dict[str, RunResult] = {}
 
-    class Config:
-        extra = "allow"
+    def get_run_id(self, lang: str, model: str) -> str:
+        return f"{lang}--{model}"
+
+    def add_run(self, run: RunResult) -> str:
+        run_id = self.get_run_id(run.lang, run.model)
+        self.runs[run_id] = run
+        return run_id

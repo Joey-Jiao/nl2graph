@@ -5,12 +5,29 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nl2graph"
 version = "0.1.0"
-description = "A LLM-driven framework for NL to query language on knowledge graph"
+description = "Various implementations of natural language to graph query language translation"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
     "tqdm",
     "loguru",
+    "pydantic",
+    "punq",
+    "pyyaml",
+    "python-dotenv",
+    "jinja2",
+    "neo4j",
+    "openai",
+    "torch",
+    "transformers",
+    "graphq-trans",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "ruff",
 ]
 
 [tool.setuptools.packages.find]

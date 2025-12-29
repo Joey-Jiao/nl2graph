@@ -4,25 +4,24 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
 from ..graph.schema.base import BaseSchema
-from .entity import Record, RunResult, GenerationResult, ExecutionResult, EvaluationResult
-from .generator import QueryGenerator
-from .executor import QueryExecutor
-from .evaluator import Evaluator
+from ..eval import Record, RunResult, GenerationResult, ExecutionResult, EvaluationResult, Scoring, Execution
+from .generation import Generation
 
 
-class PipelineRunner:
+class LLMPipeline:
+
     def __init__(
         self,
-        generator: Optional[QueryGenerator] = None,
-        executor: Optional[QueryExecutor] = None,
-        evaluator: Optional[Evaluator] = None,
+        generation: Optional[Generation] = None,
+        execution: Optional[Execution] = None,
+        scoring: Optional[Scoring] = None,
         lang: str = "cypher",
         model: str = "unknown",
         workers: int = 1,
     ):
-        self.generator = generator
-        self.executor = executor
-        self.evaluator = evaluator or Evaluator()
+        self.generation = generation
+        self.execution = execution
+        self.scoring = scoring or Scoring()
         self.lang = lang
         self.model = model
         self.run_id = f"{lang}--{model}"
@@ -30,16 +29,20 @@ class PipelineRunner:
 
     def _ensure_run(self, record: Record):
         if self.run_id not in record.runs:
-            record.runs[self.run_id] = RunResult(lang=self.lang, model=self.model)
+            record.runs[self.run_id] = RunResult(
+                method="llm",
+                lang=self.lang,
+                model=self.model,
+            )
 
     def _generate_one(self, record: Record, schema: BaseSchema) -> GenerationResult:
-        return self.generator.generate(record, schema)
+        return self.generation.generate(record, schema)
 
     def _execute_one(self, record: Record) -> ExecutionResult:
-        return self.executor.execute(record, self.run_id)
+        return self.execution.execute(record, self.run_id)
 
     def _evaluate_one(self, record: Record) -> EvaluationResult:
-        return self.evaluator.evaluate(record, self.run_id)
+        return self.scoring.evaluate_record(record, self.run_id)
 
     def generate(self, records: List[Record], schema: BaseSchema) -> List[Record]:
         for record in records:
@@ -81,17 +84,7 @@ class PipelineRunner:
     def evaluate(self, records: List[Record]) -> List[Record]:
         valid_records = [r for r in records if self.run_id in r.runs]
 
-        if self.workers == 1:
-            for record in tqdm(valid_records, desc="Evaluating"):
-                record.runs[self.run_id].eval = self._evaluate_one(record)
-        else:
-            with ThreadPoolExecutor(max_workers=self.workers) as executor:
-                future_to_record = {
-                    executor.submit(self._evaluate_one, record): record
-                    for record in valid_records
-                }
-                for future in tqdm(as_completed(future_to_record), total=len(valid_records), desc="Evaluating"):
-                    record = future_to_record[future]
-                    record.runs[self.run_id].eval = future.result()
+        for record in tqdm(valid_records, desc="Evaluating"):
+            record.runs[self.run_id].eval = self._evaluate_one(record)
 
         return records

@@ -4,25 +4,26 @@ from ..graph.connectors.base import BaseConnector
 from .entity import Record, ExecutionResult
 
 
-class QueryExecutor:
+class Execution:
+
     def __init__(self, connector: BaseConnector):
         self.connector = connector
 
     def execute(self, record: Record, run_id: str) -> ExecutionResult:
         run = record.runs.get(run_id)
-        if not run or not run.gen or not run.gen.query_processed:
+        if not run or not run.gen or not run.gen.query:
             return ExecutionResult(
                 success=False,
                 error="no query to execute",
             )
 
-        query = run.gen.query_processed
+        query = run.gen.query
 
         try:
             result = self.connector.execute(query)
             answer = self._extract_answer(result.rows)
             return ExecutionResult(
-                answer=answer,
+                result=answer,
                 success=True,
             )
         except Exception as e:

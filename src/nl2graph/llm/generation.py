@@ -1,12 +1,14 @@
 import re
 
 from ..base.llm.service import LLMService
+from ..base.llm.entity import LLMMessage
 from ..base.templates.service import TemplateService
 from ..graph.schema.base import BaseSchema
-from .entity import Record, GenerationResult
+from ..eval.entity import Record, GenerationResult
 
 
-class QueryGenerator:
+class Generation:
+
     def __init__(
         self,
         llm_service: LLMService,
@@ -34,16 +36,15 @@ class QueryGenerator:
             lang=self.lang,
         )
 
-        from ..base.llm.entity import LLMMessage
         messages = [LLMMessage.user(prompt)]
         response = client.chat(messages)
 
         query_raw = response.content
-        query_processed = self._extract_query(query_raw)
+        query = self._extract_query(query_raw)
 
         return GenerationResult(
             query_raw=query_raw,
-            query_processed=query_processed,
+            query=query,
         )
 
     def _extract_query(self, raw: str) -> str:
