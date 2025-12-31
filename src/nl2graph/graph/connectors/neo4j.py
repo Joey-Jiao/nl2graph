@@ -1,7 +1,7 @@
-from typing import Optional, List, Dict, Any
+import re
+from typing import Optional, List, Dict
 
-from ..entity import QueryLanguage, ConnectionConfig
-from ..schema.base import BaseSchema
+from ..entity import QueryLanguage
 from ..schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
 from ..result.entity import QueryResult
 from ..result.converter import convert_neo4j_value
@@ -47,17 +47,22 @@ ORDER BY rel_type
 class Neo4jConnector(BaseConnector):
     query_language = QueryLanguage.CYPHER
 
-    def __init__(self, config: ConnectionConfig):
-        super().__init__(config)
+    SANITY_HANDLERS = {
+        "lowercase_relationships": "_lowercase_relationships",
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._driver = None
+        self.sanity = kwargs.get('sanity', [])
 
     def connect(self) -> None:
         from neo4j import GraphDatabase
 
-        uri = f"bolt://{self.config.host}:{self.config.port}"
+        uri = f"bolt://{self.host}:{self.port}"
         self._driver = GraphDatabase.driver(
             uri,
-            auth=(self.config.username, self.config.password),
+            auth=(self.username, self.password),
         )
 
     def close(self) -> None:
@@ -66,8 +71,9 @@ class Neo4jConnector(BaseConnector):
             self._driver = None
 
     def execute(self, query: str, timeout: Optional[int] = None) -> QueryResult:
-        timeout_ms = (timeout or self.config.timeout) * 1000
-        database = self.config.database or "neo4j"
+        query = self._apply_sanity(query)
+        timeout_ms = (timeout or self.timeout) * 1000
+        database = self.database or "neo4j"
 
         with self._driver.session(database=database) as session:
             result = session.run(query, timeout=timeout_ms)
@@ -82,6 +88,17 @@ class Neo4jConnector(BaseConnector):
                 rows.append(row)
 
             return QueryResult(columns=list(columns), rows=rows, raw=records)
+
+    def _apply_sanity(self, query: str) -> str:
+        for name in self.sanity:
+            if name in self.SANITY_HANDLERS:
+                handler = getattr(self, self.SANITY_HANDLERS[name])
+                query = handler(query)
+        return query
+
+    def _lowercase_relationships(self, query: str) -> str:
+        pattern = r':\s*([A-Z_]+)(?=\s*[\]\{])'
+        return re.sub(pattern, lambda m: ':' + m.group(1).lower(), query)
 
     def get_schema(self, mode: str = "direct") -> PropertyGraphSchema:
         if mode == "apoc":
@@ -112,7 +129,7 @@ class Neo4jConnector(BaseConnector):
                 target_label=row["target_label"],
             ))
 
-        return PropertyGraphSchema(name=self.config.name, nodes=nodes, edges=edges)
+        return PropertyGraphSchema(name=self.name, nodes=nodes, edges=edges)
 
     def _get_schema_direct(self) -> PropertyGraphSchema:
         node_result = self.execute(DIRECT_NODE_PROPERTIES_QUERY)
@@ -142,4 +159,4 @@ class Neo4jConnector(BaseConnector):
                     target_label=row["target_label"],
                 ))
 
-        return PropertyGraphSchema(name=self.config.name, nodes=nodes, edges=edges)
+        return PropertyGraphSchema(name=self.name, nodes=nodes, edges=edges)

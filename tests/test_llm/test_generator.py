@@ -1,12 +1,10 @@
 import pytest
 from pathlib import Path
+from unittest.mock import Mock
 
 from nl2graph.llm.generation import Generation
 from nl2graph.base.llm.service import LLMService
-from nl2graph.base.templates.service import TemplateService
 from nl2graph.base.configs import ConfigService
-from nl2graph.eval.entity import Record
-from nl2graph.graph.schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
 
 
 @pytest.fixture
@@ -21,155 +19,93 @@ def llm_service(config_service):
     return LLMService(config=config_service)
 
 
-@pytest.fixture
-def template_service(tmp_path):
-    prompts_dir = tmp_path / "templates" / "prompts"
-    prompts_dir.mkdir(parents=True)
+class TestGeneration:
 
-    query_template = prompts_dir / "cypher.jinja2"
-    query_template.write_text("""You are a Cypher query expert. Generate a Cypher query for the following question.
+    def test_init(self):
+        mock_service = Mock(spec=LLMService)
+        gen = Generation(
+            llm_service=mock_service,
+            provider="openai",
+            model="gpt-4o-mini",
+        )
+        assert gen.provider == "openai"
+        assert gen.model == "gpt-4o-mini"
 
-Schema:
-{{ schema }}
+    def test_generate_mock(self):
+        mock_service = Mock(spec=LLMService)
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = "MATCH (n) RETURN n"
+        mock_client.chat.return_value = mock_response
+        mock_service.get_client.return_value = mock_client
 
-Question: {{ question }}
+        gen = Generation(
+            llm_service=mock_service,
+            provider="openai",
+            model="gpt-4o-mini",
+        )
 
-Generate only the Cypher query, wrapped in ```cypher``` code block.""")
+        result = gen.generate("Generate a cypher query to find all nodes")
 
-    config_file = tmp_path / "config.yaml"
-    config_file.write_text(f"templates:\n  prompts: {prompts_dir}\n")
+        assert result == "MATCH (n) RETURN n"
+        mock_service.get_client.assert_called_once_with("openai", "gpt-4o-mini")
+        mock_client.chat.assert_called_once()
 
-    config = ConfigService(config_dir=[config_file], env_path=".env.nonexistent")
-    return TemplateService(config)
+    def test_generate_batch_mock(self):
+        mock_service = Mock(spec=LLMService)
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = "MATCH (n) RETURN n"
+        mock_client.chat.return_value = mock_response
+        mock_service.get_client.return_value = mock_client
 
+        gen = Generation(
+            llm_service=mock_service,
+            provider="openai",
+            model="gpt-4o-mini",
+        )
 
-@pytest.fixture
-def movie_schema():
-    return PropertyGraphSchema(
-        name="MovieDB",
-        nodes=[
-            NodeSchema(
-                label="Person",
-                properties=[
-                    PropertySchema(name="name", data_type="string"),
-                    PropertySchema(name="born", data_type="int"),
-                ],
-            ),
-            NodeSchema(
-                label="Movie",
-                properties=[
-                    PropertySchema(name="title", data_type="string"),
-                    PropertySchema(name="released", data_type="int"),
-                ],
-            ),
-        ],
-        edges=[
-            EdgeSchema(label="ACTED_IN", source_label="Person", target_label="Movie"),
-            EdgeSchema(label="DIRECTED", source_label="Person", target_label="Movie"),
-        ],
-    )
+        results = gen.generate_batch(["prompt1", "prompt2"])
+
+        assert len(results) == 2
+        assert results[0] == "MATCH (n) RETURN n"
+        assert results[1] == "MATCH (n) RETURN n"
 
 
-class TestGenerationReal:
+class TestGenerationIntegration:
 
-    def test_generate_with_openai(self, config_service, llm_service, template_service, movie_schema):
+    def test_generate_with_openai(self, config_service, llm_service):
         api_key = config_service.get_env("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
-        generator = Generation(
+        gen = Generation(
             llm_service=llm_service,
-            template_service=template_service,
             provider="openai",
             model="gpt-4o-mini",
-            lang="cypher",
-            prompt_template="cypher",
         )
 
-        record = Record(
-            question="Who directed the movie The Matrix?",
-            answer=["Lana Wachowski", "Lilly Wachowski"],
-        )
+        prompt = "Say 'hello' and nothing else."
+        result = gen.generate(prompt)
 
-        result = generator.generate(record, movie_schema)
+        assert result is not None
+        assert len(result) > 0
+        print(f"\n[OpenAI]: {result}")
 
-        assert result.query_raw is not None
-        assert result.query is not None
-        print(f"\n[OpenAI Raw]: {result.query_raw}")
-        print(f"[OpenAI Query]: {result.query}")
-
-    def test_generate_with_deepseek(self, config_service, llm_service, template_service, movie_schema):
+    def test_generate_with_deepseek(self, config_service, llm_service):
         api_key = config_service.get_env("DEEPSEEK_API_KEY")
         if not api_key:
             pytest.skip("DEEPSEEK_API_KEY not set")
 
-        generator = Generation(
+        gen = Generation(
             llm_service=llm_service,
-            template_service=template_service,
             provider="deepseek",
             model="deepseek-chat",
-            lang="cypher",
-            prompt_template="cypher",
         )
 
-        record = Record(
-            question="Find all actors who acted in movies released after 2000",
-            answer=[],
-        )
+        prompt = "Say 'hello' and nothing else."
+        result = gen.generate(prompt)
 
-        result = generator.generate(record, movie_schema)
-
-        assert result.query_raw is not None
-        assert result.query is not None
-        print(f"\n[DeepSeek Raw]: {result.query_raw}")
-        print(f"[DeepSeek Query]: {result.query}")
-
-
-class TestExtractQuery:
-
-    def test_extract_query_with_code_block(self):
-        from nl2graph.llm.generation import Generation
-        from unittest.mock import Mock
-
-        generator = Generation(
-            llm_service=Mock(),
-            template_service=Mock(),
-            provider="test",
-            model="test",
-            lang="cypher",
-            prompt_template="test",
-        )
-
-        assert generator._extract_query("```cypher\nMATCH (n) RETURN n\n```") == "MATCH (n) RETURN n"
-        assert generator._extract_query("```\nSELECT * FROM t\n```") == "SELECT * FROM t"
-        assert generator._extract_query("```sparql\nSELECT ?x\n```") == "SELECT ?x"
-
-    def test_extract_query_with_inline_code(self):
-        from nl2graph.llm.generation import Generation
-        from unittest.mock import Mock
-
-        generator = Generation(
-            llm_service=Mock(),
-            template_service=Mock(),
-            provider="test",
-            model="test",
-            lang="cypher",
-            prompt_template="test",
-        )
-
-        assert generator._extract_query("`MATCH (n) RETURN n`") == "MATCH (n) RETURN n"
-
-    def test_extract_query_plain_text(self):
-        from nl2graph.llm.generation import Generation
-        from unittest.mock import Mock
-
-        generator = Generation(
-            llm_service=Mock(),
-            template_service=Mock(),
-            provider="test",
-            model="test",
-            lang="cypher",
-            prompt_template="test",
-        )
-
-        assert generator._extract_query("MATCH (n) RETURN n") == "MATCH (n) RETURN n"
+        assert result is not None
+        assert len(result) > 0
+        print(f"\n[DeepSeek]: {result}")

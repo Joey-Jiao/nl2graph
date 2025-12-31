@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import List, Optional
 
 import torch
-from tqdm import tqdm
 from transformers import AutoTokenizer, BartForConditionalGeneration
 
 from ..base.configs import ConfigService
@@ -18,7 +17,6 @@ class Generation:
         special_tokens: Optional[List[str]] = None,
         device: Optional[str] = None,
     ):
-        self.config_service = config_service
         self.max_length = 512
         self.batch_size = 32
         if config_service:
@@ -44,10 +42,10 @@ class Generation:
         self.model = self.model.to(self.device)
         self.model.eval()
 
-    def generate(self, question: str, max_length: Optional[int] = None) -> str:
+    def generate(self, text: str, max_length: Optional[int] = None) -> str:
         max_length = max_length or self.max_length
         encoded = self.tokenizer(
-            question,
+            text,
             return_tensors="pt",
             padding=True,
             truncation=True,
@@ -72,7 +70,7 @@ class Generation:
 
     def generate_batch(
         self,
-        questions: List[str],
+        texts: List[str],
         max_length: Optional[int] = None,
         batch_size: Optional[int] = None,
     ) -> List[str]:
@@ -80,8 +78,8 @@ class Generation:
         batch_size = batch_size or self.batch_size
         predictions = []
 
-        for i in tqdm(range(0, len(questions), batch_size), desc="Generating"):
-            batch = questions[i:i + batch_size]
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
 
             encoded = self.tokenizer(
                 batch,
@@ -112,40 +110,3 @@ class Generation:
             predictions.extend(batch_predictions)
 
         return predictions
-
-    def generate_from_dataloader(self, dataloader, max_length: Optional[int] = None):
-        max_length = max_length or self.max_length
-        all_outputs = []
-        all_targets = []
-
-        with torch.no_grad():
-            for batch in tqdm(dataloader, total=len(dataloader), desc="Generating"):
-                source_ids, source_mask, _, target_ids, _ = [
-                    x.to(self.device) if x is not None else None for x in batch
-                ]
-                outputs = self.model.generate(
-                    input_ids=source_ids,
-                    max_length=max_length,
-                )
-                all_outputs.extend(outputs.cpu().numpy())
-                if target_ids is not None:
-                    all_targets.extend(target_ids.cpu().numpy())
-
-        outputs = [
-            self.tokenizer.decode(
-                output_id,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False,
-            )
-            for output_id in all_outputs
-        ]
-        targets = [
-            self.tokenizer.decode(
-                target_id,
-                skip_special_tokens=True,
-                clean_up_tokenization_spaces=False,
-            )
-            for target_id in all_targets
-        ] if all_targets else []
-
-        return outputs, targets

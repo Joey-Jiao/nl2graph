@@ -1,6 +1,6 @@
-from typing import List, Dict, Optional, Any, Literal
+from typing import List, Optional, Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class GenerationResult(BaseModel):
@@ -22,7 +22,22 @@ class EvaluationResult(BaseModel):
     recall: Optional[float] = None
 
 
-class RunResult(BaseModel):
+class Record(BaseModel):
+    id: str
+    question: str
+    answer: List[Any]
+    hop: Optional[int] = None
+
+    def to_dict(self) -> dict:
+        return self.model_dump()
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "Record":
+        return cls.model_validate(data)
+
+
+class Result(BaseModel):
+    record_id: str
     method: Literal["llm", "seq2seq"]
     lang: str
     model: str
@@ -30,19 +45,9 @@ class RunResult(BaseModel):
     exec: Optional[ExecutionResult] = None
     eval: Optional[EvaluationResult] = None
 
+    def to_dict(self) -> dict:
+        return self.model_dump()
 
-class Record(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    question: str
-    answer: List[Any]
-    hop: Optional[int] = None
-    runs: Dict[str, RunResult] = {}
-
-    def get_run_id(self, lang: str, model: str) -> str:
-        return f"{lang}--{model}"
-
-    def add_run(self, run: RunResult) -> str:
-        run_id = self.get_run_id(run.lang, run.model)
-        self.runs[run_id] = run
-        return run_id
+    @classmethod
+    def from_dict(cls, data: dict) -> "Result":
+        return cls.model_validate(data)

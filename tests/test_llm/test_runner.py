@@ -1,14 +1,16 @@
 import pytest
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from nl2graph.llm.pipeline import LLMPipeline
+from nl2graph.workflow import InferencePipeline
 from nl2graph.llm.generation import Generation
 from nl2graph.eval import Execution
 from nl2graph.base.llm.service import LLMService
 from nl2graph.base.templates.service import TemplateService
 from nl2graph.base.configs import ConfigService
-from nl2graph.eval import Record, RunResult, GenerationResult, ExecutionResult, Scoring
+from nl2graph.eval import Record, Result, GenerationResult, ExecutionResult, Scoring
+from nl2graph.eval.repository import ResultRepository
 from nl2graph.graph.schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
 
 
@@ -61,20 +63,26 @@ def movie_schema():
     )
 
 
+@pytest.fixture
+def dst():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        db_path = Path(tmpdir) / "dst.db"
+        repo = ResultRepository(str(db_path))
+        yield repo
+        repo.close()
+
+
 class TestLLMPipelineReal:
 
-    def test_full_pipeline_openai(self, config_service, llm_service, template_service, movie_schema):
+    def test_full_pipeline_openai(self, config_service, llm_service, template_service, movie_schema, dst):
         api_key = config_service.get_env("OPENAI_API_KEY")
         if not api_key:
             pytest.skip("OPENAI_API_KEY not set")
 
         generation = Generation(
             llm_service=llm_service,
-            template_service=template_service,
             provider="openai",
             model="gpt-4o-mini",
-            lang="cypher",
-            prompt_template="cypher",
         )
 
         mock_connector = Mock()
@@ -85,51 +93,53 @@ class TestLLMPipelineReal:
         execution = Execution(mock_connector)
         scoring = Scoring()
 
-        runner = LLMPipeline(
-            generation=generation,
+        pipeline = InferencePipeline(
+            generator=generation,
+            dst=dst,
+            template_service=template_service,
+            template_name="cypher",
+            extract_query=True,
             execution=execution,
             scoring=scoring,
+            method="llm",
             lang="cypher",
             model="gpt-4o-mini",
             workers=1,
         )
 
         records = [
-            Record(question="Who directed Inception?", answer=["Christopher Nolan"]),
+            Record(id="q001", question="Who directed Inception?", answer=["Christopher Nolan"]),
         ]
 
         print("\n=== OpenAI Full Pipeline Test ===")
 
-        records = runner.generate(records, movie_schema)
-        gen_result = records[0].runs["cypher--gpt-4o-mini"].gen
-        print(f"[Generated Query Raw]: {gen_result.query_raw}")
-        print(f"[Generated Query]: {gen_result.query}")
-        assert gen_result.query is not None
+        records = pipeline.generate(records, movie_schema)
+        res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
+        print(f"[Generated Query Raw]: {res.gen.query_raw}")
+        print(f"[Generated Query]: {res.gen.query}")
+        assert res.gen.query is not None
 
-        records = runner.execute(records)
-        exec_result = records[0].runs["cypher--gpt-4o-mini"].exec
-        print(f"[Execution Success]: {exec_result.success}")
-        print(f"[Execution Result]: {exec_result.result}")
-        assert exec_result.success is True
+        records = pipeline.execute(records)
+        res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
+        print(f"[Execution Success]: {res.exec.success}")
+        print(f"[Execution Result]: {res.exec.result}")
+        assert res.exec.success is True
 
-        records = runner.evaluate(records)
-        eval_result = records[0].runs["cypher--gpt-4o-mini"].eval
-        print(f"[Exact Match]: {eval_result.exact_match}")
-        print(f"[F1]: {eval_result.f1}")
-        assert eval_result is not None
+        records = pipeline.evaluate(records)
+        res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
+        print(f"[Exact Match]: {res.eval.exact_match}")
+        print(f"[F1]: {res.eval.f1}")
+        assert res.eval is not None
 
-    def test_full_pipeline_deepseek(self, config_service, llm_service, template_service, movie_schema):
+    def test_full_pipeline_deepseek(self, config_service, llm_service, template_service, movie_schema, dst):
         api_key = config_service.get_env("DEEPSEEK_API_KEY")
         if not api_key:
             pytest.skip("DEEPSEEK_API_KEY not set")
 
         generation = Generation(
             llm_service=llm_service,
-            template_service=template_service,
             provider="deepseek",
             model="deepseek-chat",
-            lang="cypher",
-            prompt_template="cypher",
         )
 
         mock_connector = Mock()
@@ -140,36 +150,41 @@ class TestLLMPipelineReal:
         execution = Execution(mock_connector)
         scoring = Scoring()
 
-        runner = LLMPipeline(
-            generation=generation,
+        pipeline = InferencePipeline(
+            generator=generation,
+            dst=dst,
+            template_service=template_service,
+            template_name="cypher",
+            extract_query=True,
             execution=execution,
             scoring=scoring,
+            method="llm",
             lang="cypher",
             model="deepseek-chat",
             workers=1,
         )
 
         records = [
-            Record(question="Find all actors in the database", answer=["Tom Hanks", "Leonardo DiCaprio"]),
+            Record(id="q001", question="Find all actors in the database", answer=["Tom Hanks", "Leonardo DiCaprio"]),
         ]
 
         print("\n=== DeepSeek Full Pipeline Test ===")
 
-        records = runner.generate(records, movie_schema)
-        gen_result = records[0].runs["cypher--deepseek-chat"].gen
-        print(f"[Generated Query Raw]: {gen_result.query_raw}")
-        print(f"[Generated Query]: {gen_result.query}")
-        assert gen_result.query is not None
+        records = pipeline.generate(records, movie_schema)
+        res = dst.get("q001", "llm", "cypher", "deepseek-chat")
+        print(f"[Generated Query Raw]: {res.gen.query_raw}")
+        print(f"[Generated Query]: {res.gen.query}")
+        assert res.gen.query is not None
 
-        records = runner.execute(records)
-        exec_result = records[0].runs["cypher--deepseek-chat"].exec
-        print(f"[Execution Success]: {exec_result.success}")
-        print(f"[Execution Result]: {exec_result.result}")
+        records = pipeline.execute(records)
+        res = dst.get("q001", "llm", "cypher", "deepseek-chat")
+        print(f"[Execution Success]: {res.exec.success}")
+        print(f"[Execution Result]: {res.exec.result}")
 
-        records = runner.evaluate(records)
-        eval_result = records[0].runs["cypher--deepseek-chat"].eval
-        print(f"[Exact Match]: {eval_result.exact_match}")
-        print(f"[F1]: {eval_result.f1}")
+        records = pipeline.evaluate(records)
+        res = dst.get("q001", "llm", "cypher", "deepseek-chat")
+        print(f"[Exact Match]: {res.eval.exact_match}")
+        print(f"[F1]: {res.eval.f1}")
 
 
 class TestExecution:
@@ -185,50 +200,50 @@ class TestExecution:
     def test_execute_success(self, mock_connector):
         execution = Execution(mock_connector)
 
-        record = Record(question="Q", answer=["A"])
-        record.runs["cypher--gpt-4o"] = RunResult(
+        result = Result(
+            record_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
             gen=GenerationResult(query="MATCH (n) RETURN n.name"),
         )
 
-        result = execution.execute(record, "cypher--gpt-4o")
+        exec_result = execution.execute(result)
 
-        assert result.success is True
-        assert result.result == ["Alice", "Bob"]
+        assert exec_result.success is True
+        assert exec_result.result == ["Alice", "Bob"]
 
     def test_execute_no_query(self, mock_connector):
         execution = Execution(mock_connector)
 
-        record = Record(question="Q", answer=["A"])
-        record.runs["cypher--gpt-4o"] = RunResult(
+        result = Result(
+            record_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
         )
 
-        result = execution.execute(record, "cypher--gpt-4o")
+        exec_result = execution.execute(result)
 
-        assert result.success is False
-        assert "no query" in result.error
+        assert exec_result.success is False
+        assert "no query" in exec_result.error
 
     def test_execute_error(self, mock_connector):
         mock_connector.execute.side_effect = Exception("Connection failed")
         execution = Execution(mock_connector)
 
-        record = Record(question="Q", answer=["A"])
-        record.runs["cypher--gpt-4o"] = RunResult(
+        result = Result(
+            record_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
             gen=GenerationResult(query="MATCH (n) RETURN n"),
         )
 
-        result = execution.execute(record, "cypher--gpt-4o")
+        exec_result = execution.execute(result)
 
-        assert result.success is False
-        assert "Connection failed" in result.error
+        assert exec_result.success is False
+        assert "Connection failed" in exec_result.error
 
     def test_extract_answer_single_column(self, mock_connector):
         execution = Execution(mock_connector)
@@ -248,29 +263,24 @@ class TestExecution:
         assert result == []
 
 
-class TestLLMPipelineUnit:
+class TestInferencePipelineUnit:
 
-    def test_init(self):
-        runner = LLMPipeline(
-            generation=Mock(),
+    @pytest.fixture
+    def dst(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = Path(tmpdir) / "dst.db"
+            repo = ResultRepository(str(db_path))
+            yield repo
+            repo.close()
+
+    def test_init(self, dst):
+        pipeline = InferencePipeline(
+            generator=Mock(),
+            dst=dst,
             execution=Mock(),
+            method="llm",
             lang="cypher",
             model="gpt-4o",
         )
-        assert runner.run_id == "cypher--gpt-4o"
-        assert runner.lang == "cypher"
-        assert runner.model == "gpt-4o"
-
-    def test_ensure_run_creates_run(self):
-        runner = LLMPipeline(
-            generation=Mock(),
-            execution=Mock(),
-            lang="cypher",
-            model="gpt-4o",
-        )
-
-        record = Record(question="Q", answer=["A"])
-        runner._ensure_run(record)
-
-        assert "cypher--gpt-4o" in record.runs
-        assert record.runs["cypher--gpt-4o"].method == "llm"
+        assert pipeline.lang == "cypher"
+        assert pipeline.model == "gpt-4o"

@@ -61,15 +61,54 @@ class TestModelService:
         config_file = tmp_path / "config.yaml"
         config_file.write_text("""
 seq2seq:
-  checkpoints_dir: "models/checkpoints"
+  checkpoints:
+    kqapro_ir:
+      path: "models/checkpoints/kqapro_ir/checkpoint-best"
+      dataset: "kqapro"
+      lang: "sparql"
+      ir_mode: "graphq"
   models:
     bart-base:
       path: "models/pretrained/bart-base"
 """)
         config = ConfigService(config_dir=[config_file], env_path=".env.nonexistent")
         service = ModelService(config=config)
-        path = service.get_checkpoint_path("kqapro", "bart-base")
-        assert path == Path("models/checkpoints/kqapro/bart-base/checkpoint-best")
+        path = service.get_checkpoint_path("kqapro_ir")
+        assert path == Path("models/checkpoints/kqapro_ir/checkpoint-best")
+
+    def test_get_checkpoint_config(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+seq2seq:
+  checkpoints:
+    kqapro_ir:
+      path: "models/checkpoints/kqapro_ir/checkpoint-best"
+      dataset: "kqapro"
+      lang: "sparql"
+      ir_mode: "graphq"
+""")
+        config = ConfigService(config_dir=[config_file], env_path=".env.nonexistent")
+        service = ModelService(config=config)
+        ckpt_config = service.get_checkpoint_config("kqapro_ir")
+        assert ckpt_config["dataset"] == "kqapro"
+        assert ckpt_config["lang"] == "sparql"
+        assert ckpt_config["ir_mode"] == "graphq"
+
+    def test_ls_checkpoints(self, tmp_path):
+        config_file = tmp_path / "config.yaml"
+        config_file.write_text("""
+seq2seq:
+  checkpoints:
+    kqapro_ir:
+      path: "models/checkpoints/kqapro_ir/checkpoint-best"
+    metaqa_ir:
+      path: "models/checkpoints/metaqa_ir/5shot/checkpoint-best"
+""")
+        config = ConfigService(config_dir=[config_file], env_path=".env.nonexistent")
+        service = ModelService(config=config)
+        checkpoints = service.ls_checkpoints()
+        assert "kqapro_ir" in checkpoints
+        assert "metaqa_ir" in checkpoints
 
     def test_register_model(self, config_service):
         service = ModelService(config=config_service)

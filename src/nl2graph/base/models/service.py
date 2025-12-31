@@ -33,9 +33,16 @@ class ModelService:
     def get_model_config(self, model_name: str) -> Optional[ModelConfig]:
         return self._models.get(model_name)
 
-    def get_checkpoint_path(self, dataset: str, model_name: str) -> Path:
-        checkpoints_base = self._config.get("seq2seq.checkpoints_dir", "models/checkpoints")
-        return Path(checkpoints_base) / dataset / model_name / "checkpoint-best"
+    def get_checkpoint_path(self, checkpoint_name: str) -> Optional[Path]:
+        path = self._config.get(f"seq2seq.checkpoints.{checkpoint_name}.path")
+        return Path(path) if path else None
+
+    def get_checkpoint_config(self, checkpoint_name: str) -> Optional[Dict]:
+        return self._config.get(f"seq2seq.checkpoints.{checkpoint_name}")
+
+    def ls_checkpoints(self):
+        checkpoints = self._config.get("seq2seq.checkpoints", {})
+        return list(checkpoints.keys())
 
     def register_model(self, model_config: ModelConfig):
         self._models[model_config.name] = model_config

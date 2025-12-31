@@ -4,8 +4,8 @@ from nl2graph.eval.entity import (
     GenerationResult,
     ExecutionResult,
     EvaluationResult,
-    RunResult,
     Record,
+    Result,
 )
 
 
@@ -76,14 +76,50 @@ class TestEvaluationResult:
         assert result.recall == 0.85
 
 
-class TestRunResult:
+class TestRecord:
+
+    def test_create(self):
+        record = Record(id="q001", question="What is X?", answer=["Y"])
+        assert record.id == "q001"
+        assert record.question == "What is X?"
+        assert record.answer == ["Y"]
+        assert record.hop is None
+
+    def test_create_with_hop(self):
+        record = Record(id="q001", question="Q", answer=["A"], hop=2)
+        assert record.hop == 2
+
+    def test_to_dict(self):
+        record = Record(id="q001", question="Q", answer=["A"], hop=1)
+        d = record.to_dict()
+        assert d["id"] == "q001"
+        assert d["question"] == "Q"
+        assert d["answer"] == ["A"]
+        assert d["hop"] == 1
+
+    def test_from_dict(self):
+        d = {"id": "q001", "question": "Q", "answer": ["A"], "hop": 1}
+        record = Record.from_dict(d)
+        assert record.id == "q001"
+        assert record.question == "Q"
+        assert record.answer == ["A"]
+        assert record.hop == 1
+
+    def test_id_required(self):
+        with pytest.raises(ValueError):
+            Record(question="Q", answer=["A"])
+
+
+class TestResult:
 
     def test_create_minimal(self):
-        result = RunResult(
+        result = Result(
+            record_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
         )
+        assert result.record_id == "q001"
         assert result.method == "llm"
         assert result.lang == "cypher"
         assert result.model == "gpt-4o"
@@ -92,10 +128,11 @@ class TestRunResult:
         assert result.eval is None
 
     def test_create_with_nested(self):
-        result = RunResult(
+        result = Result(
+            record_id="q001",
             method="seq2seq",
             lang="sparql",
-            model="bart-base",
+            model="bart",
             gen=GenerationResult(query="SELECT ?x WHERE { ?x a :Person }"),
             exec=ExecutionResult(result=["Alice"], success=True),
             eval=EvaluationResult(exact_match=1.0),
@@ -107,49 +144,31 @@ class TestRunResult:
 
     def test_method_literal_validation(self):
         with pytest.raises(ValueError):
-            RunResult(method="invalid", lang="cypher", model="test")
+            Result(record_id="q001", method="invalid", lang="cypher", model="test")
 
-
-class TestRecord:
-
-    def test_create_minimal(self):
-        record = Record(question="What is X?", answer=["Y"])
-        assert record.question == "What is X?"
-        assert record.answer == ["Y"]
-        assert record.hop is None
-        assert record.runs == {}
-
-    def test_create_with_hop(self):
-        record = Record(question="Q", answer=["A"], hop=2)
-        assert record.hop == 2
-
-    def test_get_run_id(self):
-        record = Record(question="Q", answer=["A"])
-        run_id = record.get_run_id("cypher", "gpt-4o")
-        assert run_id == "cypher--gpt-4o"
-
-    def test_add_run(self):
-        record = Record(question="Q", answer=["A"])
-        run = RunResult(method="llm", lang="cypher", model="gpt-4o")
-        run_id = record.add_run(run)
-        assert run_id == "cypher--gpt-4o"
-        assert "cypher--gpt-4o" in record.runs
-        assert record.runs["cypher--gpt-4o"] == run
-
-    def test_multiple_runs(self):
-        record = Record(question="Q", answer=["A"])
-        run1 = RunResult(method="llm", lang="cypher", model="gpt-4o")
-        run2 = RunResult(method="seq2seq", lang="sparql", model="bart")
-        record.add_run(run1)
-        record.add_run(run2)
-        assert len(record.runs) == 2
-        assert "cypher--gpt-4o" in record.runs
-        assert "sparql--bart" in record.runs
-
-    def test_extra_fields_allowed(self):
-        record = Record(
-            question="Q",
-            answer=["A"],
-            extra_field="extra_value",
+    def test_to_dict(self):
+        result = Result(
+            record_id="q001",
+            method="llm",
+            lang="cypher",
+            model="gpt-4o",
+            gen=GenerationResult(query="MATCH..."),
         )
-        assert record.question == "Q"
+        d = result.to_dict()
+        assert d["record_id"] == "q001"
+        assert d["method"] == "llm"
+        assert d["gen"]["query"] == "MATCH..."
+
+    def test_from_dict(self):
+        d = {
+            "record_id": "q001",
+            "method": "llm",
+            "lang": "cypher",
+            "model": "gpt-4o",
+            "gen": {"query": "MATCH..."},
+            "exec": None,
+            "eval": None,
+        }
+        result = Result.from_dict(d)
+        assert result.record_id == "q001"
+        assert result.gen.query == "MATCH..."

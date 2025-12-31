@@ -4,10 +4,10 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from nl2graph.base.configs import ConfigService
-from nl2graph.seq2seq.train.preprocessing import Preprocessor
+from nl2graph.seq2seq.train.preprocessing import Preprocessing
 
 
-class TestPreprocessor:
+class TestPreprocessing:
 
     @pytest.fixture
     def mock_config_service(self):
@@ -23,12 +23,13 @@ class TestPreprocessor:
         config_file.write_text("""
 special_tokens = []
 
-def load_data(args):
+def load_data(input_dir):
     import json
-    import os
-    train_set = json.load(open(os.path.join(args.input_dir, 'train.json')))
-    val_set = json.load(open(os.path.join(args.input_dir, 'val.json')))
-    test_set = json.load(open(os.path.join(args.input_dir, 'test.json')))
+    from pathlib import Path
+    input_dir = Path(input_dir)
+    train_set = json.load(open(input_dir / 'train.json'))
+    val_set = json.load(open(input_dir / 'val.json'))
+    test_set = json.load(open(input_dir / 'test.json'))
 
     for dataset in [train_set, val_set, test_set]:
         for item in dataset:
@@ -67,10 +68,10 @@ def load_data(args):
         mock_tokenizer = Mock()
         mock_tokenizer_class.from_pretrained.return_value = mock_tokenizer
 
-        preprocessor = Preprocessor(mock_config_service, str(sample_config))
+        preprocessing = Preprocessing(mock_config_service, str(sample_config))
 
-        assert preprocessor.dataset_config is not None
-        assert preprocessor.dataset_config.special_tokens == []
+        assert preprocessing.dataset_config is not None
+        assert preprocessing.dataset_config.special_tokens == []
         mock_tokenizer_class.from_pretrained.assert_called_once()
 
     @patch("nl2graph.seq2seq.train.preprocessing.AutoTokenizer")
@@ -84,10 +85,10 @@ def load_data(args):
             "attention_mask": [[1, 1, 1]],
         }
 
-        preprocessor = Preprocessor(mock_config_service, str(sample_config))
+        preprocessing = Preprocessing(mock_config_service, str(sample_config))
         output_dir = tmp_path / "output"
 
-        preprocessor.process(sample_data_dir, output_dir)
+        preprocessing.process(sample_data_dir, output_dir)
 
         assert (output_dir / "train.pt").exists()
         assert (output_dir / "val.pt").exists()

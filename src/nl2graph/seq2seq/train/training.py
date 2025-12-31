@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from ...base.configs import ConfigService
 from .config import DatasetConfig
-from .data.dataset import DataLoader, DistributedDataLoader, prepare_dataset
+from .dataset import DataLoader, DistributedDataLoader, prepare_dataset
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_st
     return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-class Trainer:
+class Training:
 
     def __init__(
         self,
@@ -39,15 +39,15 @@ class Trainer:
         dataset_config: DatasetConfig,
         input_dir: Path,
         output_dir: Path,
+        model_name_or_path: str,
         local_rank: int = -1,
     ):
         self.config_service = config_service
         self.dataset_config = dataset_config
         self.input_dir = Path(input_dir)
         self.output_dir = Path(output_dir)
+        self.model_name_or_path = model_name_or_path
         self.local_rank = local_rank
-
-        self.model_name_or_path = config_service.get("seq2seq.model_name_or_path", "facebook/bart-base")
         self.batch_size = config_service.get("seq2seq.training.batch_size", 64)
         self.learning_rate = config_service.get("seq2seq.training.learning_rate", 3e-5)
         self.num_epochs = config_service.get("seq2seq.training.num_epochs", 100)

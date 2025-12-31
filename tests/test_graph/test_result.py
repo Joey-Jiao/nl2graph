@@ -1,7 +1,7 @@
 import pytest
 
 from nl2graph.graph.result.entity import QueryResult
-from nl2graph.graph.entity import QueryLanguage, ConnectionConfig
+from nl2graph.graph.entity import QueryLanguage
 
 
 class TestQueryResult:
@@ -77,39 +77,3 @@ class TestQueryLanguage:
         assert QueryLanguage.GREMLIN.value == "gremlin"
 
 
-class TestConnectionConfig:
-
-    def test_create_minimal(self):
-        config = ConnectionConfig(
-            name="test",
-            query_language=QueryLanguage.CYPHER,
-        )
-        assert config.name == "test"
-        assert config.query_language == QueryLanguage.CYPHER
-        assert config.host is None
-        assert config.port is None
-        assert config.timeout == 30
-
-    def test_create_full(self):
-        config = ConnectionConfig(
-            name="neo4j-prod",
-            query_language=QueryLanguage.CYPHER,
-            host="localhost",
-            port=7687,
-            username="neo4j",
-            password="password",
-            database="neo4j",
-            timeout=60,
-        )
-        assert config.host == "localhost"
-        assert config.port == 7687
-        assert config.username == "neo4j"
-        assert config.database == "neo4j"
-        assert config.timeout == 60
-
-    def test_query_language_from_string(self):
-        config = ConnectionConfig(
-            name="test",
-            query_language="sparql",
-        )
-        assert config.query_language == QueryLanguage.SPARQL

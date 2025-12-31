@@ -1,7 +1,6 @@
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
-from ..entity import QueryLanguage, ConnectionConfig
-from ..schema.base import BaseSchema
+from ..entity import QueryLanguage
 from ..schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
 from ..result.entity import QueryResult
 from ..result.converter import convert_gremlin_value
@@ -14,8 +13,8 @@ if TYPE_CHECKING:
 class GremlinConnector(BaseConnector):
     query_language = QueryLanguage.GREMLIN
 
-    def __init__(self, config: ConnectionConfig):
-        super().__init__(config)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._connection = None
         self._g: Optional["GraphTraversalSource"] = None
 
@@ -23,7 +22,7 @@ class GremlinConnector(BaseConnector):
         from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
         from gremlin_python.process.anonymous_traversal import traversal
 
-        url = f"ws://{self.config.host}:{self.config.port}/gremlin"
+        url = f"ws://{self.host}:{self.port}/gremlin"
         self._connection = DriverRemoteConnection(url, "g")
         self._g = traversal().withRemote(self._connection)
 
@@ -110,4 +109,4 @@ class GremlinConnector(BaseConnector):
                         target_label=info["tgt"],
                     ))
 
-        return PropertyGraphSchema(name=self.config.name, nodes=nodes, edges=edges)
+        return PropertyGraphSchema(name=self.name, nodes=nodes, edges=edges)

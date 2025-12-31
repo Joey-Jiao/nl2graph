@@ -1,8 +1,7 @@
 from typing import Optional, List, TYPE_CHECKING
 from pathlib import Path
 
-from ..entity import QueryLanguage, ConnectionConfig
-from ..schema.base import BaseSchema
+from ..entity import QueryLanguage
 from ..schema.rdf import RDFSchema, ClassSchema, PropertyDef
 from ..result.entity import QueryResult
 from ..result.converter import convert_rdf_value
@@ -15,11 +14,11 @@ if TYPE_CHECKING:
 class RDFLibConnector(BaseConnector):
     query_language = QueryLanguage.SPARQL
 
-    def __init__(self, config: ConnectionConfig, data_path: Optional[str] = None, data_format: str = "turtle"):
-        super().__init__(config)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self._graph: Optional["Graph"] = None
-        self.data_path = data_path
-        self.data_format = data_format
+        self.data_path = kwargs.get('data_path')
+        self.data_format = kwargs.get('data_format', 'turtle')
 
     def connect(self) -> None:
         from rdflib import Graph
@@ -141,7 +140,7 @@ class RDFLibConnector(BaseConnector):
                 ))
 
         return RDFSchema(
-            name=self.config.name,
+            name=self.name,
             prefixes=prefixes,
             classes=classes,
             properties=properties,

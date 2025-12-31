@@ -24,7 +24,6 @@ templates:
   queries: "templates/queries"
 
 seq2seq:
-  model_name_or_path: "facebook/bart-base"
   max_length: 512
 
   inference:
@@ -41,26 +40,29 @@ seq2seq:
     weight_decay: 1e-5
 
   checkpoints:
-    kqapro_sparql:
-      path: "models/checkpoints/kqapro_sparql"
+    kqapro_ir:
+      path: "models/checkpoints/kqapro_ir/checkpoint-best"
       dataset: "kqapro"
       lang: "sparql"
       ir_mode: "graphq"
-    kqapro_kopl:
-      path: "models/checkpoints/kqapro_kopl"
-      dataset: "kqapro"
-      lang: "kopl"
-      ir_mode: "graphq"
-    metaqa_cypher:
-      path: "models/checkpoints/metaqa_cypher"
+    metaqa_ir:
+      path: "models/checkpoints/metaqa_ir/5shot/checkpoint-best"
       dataset: "metaqa"
       lang: "cypher"
       ir_mode: "graphq"
+    metaqa_ir_T_kqapro_ir:
+      path: "models/checkpoints/metaqa_ir_T_kqapro_ir/checkpoint-best"
+      dataset: "metaqa"
+      lang: "cypher"
+      ir_mode: "graphq"
+      transfer_from: "kqapro_ir"
 
 data:
   base_dir: "data"
 
   kqapro:
+    src: "data/kqapro/src.db"
+    dst: "data/kqapro/dst.db"
     train:
       raw: "data/kqapro/train/raw"
       processed: "data/kqapro/train/processed"
@@ -69,9 +71,10 @@ data:
     eval:
       raw: "data/kqapro/eval/raw"
       processed: "data/kqapro/eval/processed"
-    results: "data/kqapro/results"
 
   metaqa:
+    src: "data/metaqa/src.db"
+    dst: "data/metaqa/dst.db"
     train:
       raw: "data/metaqa/train/raw"
       processed: "data/metaqa/train/processed"
@@ -83,11 +86,13 @@ data:
     eval:
       raw: "data/metaqa/eval/raw"
       processed: "data/metaqa/eval/processed"
-    results: "data/metaqa/results"
     schema: "data/metaqa/schema.json"
     connection:
-      host: localhost
-      port: 7687
-      username: neo4j
-      password: MetaQANeo4j
-      database: neo4j
+      cypher:
+        host: localhost
+        port: 7687
+        username: neo4j
+        password: MetaQANeo4j
+        database: neo4j
+        sanity:
+          - lowercase_relationships

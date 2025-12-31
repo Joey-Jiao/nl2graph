@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from ..entity import QueryLanguage, ConnectionConfig
+from ..entity import QueryLanguage
 from ..schema.base import BaseSchema
 from ..result.entity import QueryResult
 
@@ -9,8 +9,14 @@ from ..result.entity import QueryResult
 class BaseConnector(ABC):
     query_language: QueryLanguage
 
-    def __init__(self, config: ConnectionConfig):
-        self.config = config
+    def __init__(self, **kwargs):
+        self.name = kwargs.get('name')
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.username = kwargs.get('username')
+        self.password = kwargs.get('password')
+        self.database = kwargs.get('database')
+        self.timeout = kwargs.get('timeout', 30)
 
     @abstractmethod
     def connect(self) -> None:

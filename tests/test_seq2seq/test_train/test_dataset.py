@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import torch
 
-from nl2graph.seq2seq.train.data.dataset import (
+from nl2graph.seq2seq.train.dataset import (
     load_vocab,
     collate_fn,
     Dataset,

@@ -1,7 +1,7 @@
 import json
 import pickle
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple
 
 import numpy as np
 from transformers import AutoTokenizer
@@ -10,7 +10,7 @@ from ...base.configs import ConfigService
 from .config import ConfigLoader
 
 
-class Preprocessor:
+class Preprocessing:
 
     def __init__(self, config_service: ConfigService, dataset_config_path: str):
         self.config_service = config_service
@@ -68,19 +68,11 @@ class Preprocessor:
 
         return source_ids, source_mask, target_ids, choices, answers
 
-    def process(self, input_dir: Path, output_dir: Path, ir_mode: Optional[str] = None):
+    def process(self, input_dir: Path, output_dir: Path):
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        class Args:
-            pass
-
-        args = Args()
-        args.input_dir = str(input_dir)
-        args.output_dir = str(output_dir)
-        args.ir_mode = ir_mode
-
-        train_set, val_set, test_set, vocab = self.dataset_config.load_data(args)
+        train_set, val_set, test_set, vocab = self.dataset_config.load_data(input_dir)
 
         vocab_path = output_dir / 'vocab.json'
         with open(vocab_path, 'w') as f:

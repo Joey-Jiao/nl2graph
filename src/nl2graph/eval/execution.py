@@ -1,7 +1,7 @@
 from typing import List, Any
 
 from ..graph.connectors.base import BaseConnector
-from .entity import Record, ExecutionResult
+from .entity import Result, ExecutionResult
 
 
 class Execution:
@@ -9,19 +9,18 @@ class Execution:
     def __init__(self, connector: BaseConnector):
         self.connector = connector
 
-    def execute(self, record: Record, run_id: str) -> ExecutionResult:
-        run = record.runs.get(run_id)
-        if not run or not run.gen or not run.gen.query:
+    def execute(self, result: Result) -> ExecutionResult:
+        if not result.gen or not result.gen.query:
             return ExecutionResult(
                 success=False,
                 error="no query to execute",
             )
 
-        query = run.gen.query
+        query = result.gen.query
 
         try:
-            result = self.connector.execute(query)
-            answer = self._extract_answer(result.rows)
+            exec_result = self.connector.execute(query)
+            answer = self._extract_answer(exec_result.rows)
             return ExecutionResult(
                 result=answer,
                 success=True,
