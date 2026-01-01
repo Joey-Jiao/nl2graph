@@ -7,8 +7,8 @@ from .log import LogService
 from .models.service import ModelService
 from .llm.service import LLMService
 from .templates.service import TemplateService
-from ..graph.service import GraphService
-from ..eval import Scoring
+from ..execution.service import GraphService
+from ..evaluation import Scoring
 
 
 class ApplicationContext:

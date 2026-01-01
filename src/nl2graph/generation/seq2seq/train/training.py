@@ -12,7 +12,7 @@ from torch.utils.data.distributed import DistributedSampler
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 from tqdm import tqdm
 
-from ...base.configs import ConfigService
+from ....base.configs import ConfigService
 from .config import DatasetConfig
 from .dataset import DataLoader, DistributedDataLoader, prepare_dataset
 

@@ -1,13 +1,13 @@
 import pytest
 
-from nl2graph.eval.entity import (
+from nl2graph.data.entity import (
     Record,
     Result,
     GenerationResult,
     ExecutionResult,
     EvaluationResult,
 )
-from nl2graph.eval.scoring import Scoring
+from nl2graph.evaluation.scoring import Scoring
 
 
 class TestScoringEvaluate:

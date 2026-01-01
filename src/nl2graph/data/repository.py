@@ -1,4 +1,4 @@
-from typing import Optional, Iterator, List
+from typing import Optional, Iterator, List, Any
 
 from ..base.storage import StorageService
 from .entity import Record, Result, GenerationResult, ExecutionResult, EvaluationResult
@@ -29,9 +29,9 @@ class SourceRepository:
         for _, data in self._storage.iter_all(self._table):
             yield Record.from_dict(data)
 
-    def iter_by_hop(self, hop: int) -> Iterator[Record]:
+    def iter_by_filter(self, **filters: Any) -> Iterator[Record]:
         for _, data in self._storage.iter_all(self._table):
-            if data.get("hop") == hop:
+            if all(data.get(k) == v for k, v in filters.items() if v is not None):
                 yield Record.from_dict(data)
 
     def close(self) -> None:

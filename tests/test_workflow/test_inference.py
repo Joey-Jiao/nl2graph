@@ -3,9 +3,11 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from nl2graph.workflow.inference import InferencePipeline
-from nl2graph.eval import Record, Result, GenerationResult, ExecutionResult, Scoring, Execution
-from nl2graph.eval.repository import ResultRepository
+from nl2graph.pipeline.inference import InferencePipeline
+from nl2graph.data import Record, Result, GenerationResult, ExecutionResult
+from nl2graph.data.repository import ResultRepository
+from nl2graph.evaluation import Scoring
+from nl2graph.execution import Execution
 
 
 class TestInferencePipeline:

@@ -84,8 +84,10 @@ data:
         3shot: "data/metaqa/train/processed/3shot"
         5shot: "data/metaqa/train/processed/5shot"
     eval:
-      raw: "data/metaqa/eval/raw"
-      processed: "data/metaqa/eval/processed"
+      data: "data/metaqa/eval/processed/data.json"
+      group_by:
+        - hop
+        - split
     schema: "data/metaqa/schema.json"
     connection:
       cypher:
@@ -96,3 +98,25 @@ data:
         database: neo4j
         sanity:
           - lowercase_relationships
+
+  openreview:
+    src: "data/openreview/src.db"
+    dst: "data/openreview/dst.db"
+    train:
+      raw: "data/openreview/train/raw"
+      processed: "data/openreview/train/processed"
+      config: "data/openreview/train/raw/config.py"
+    eval:
+      raw: "data/openreview/eval/raw"
+      processed: "data/openreview/eval/processed"
+    schema: "data/openreview/schema.json"
+    connection:
+      cypher:
+        host: localhost
+        port: 7687
+        username: neo4j
+        password: OpenReviewNeo4j
+        database: neo4j
+
+
+

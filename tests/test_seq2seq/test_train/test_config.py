@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from nl2graph.seq2seq.train.config import ConfigLoader, DatasetConfig
+from nl2graph.generation.seq2seq.train.config import ConfigLoader, DatasetConfig
 
 
 class TestConfigLoader:

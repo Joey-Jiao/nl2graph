@@ -1,7 +1,7 @@
 from typing import List, Any
 
-from ..graph.connectors.base import BaseConnector
-from .entity import Result, ExecutionResult
+from .connectors.base import BaseConnector
+from ..data.entity import Result, ExecutionResult
 
 
 class Execution:

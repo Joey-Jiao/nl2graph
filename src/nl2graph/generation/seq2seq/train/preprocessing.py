@@ -6,7 +6,7 @@ from typing import List, Dict, Tuple
 import numpy as np
 from transformers import AutoTokenizer
 
-from ...base.configs import ConfigService
+from ....base.configs import ConfigService
 from .config import ConfigLoader
 
 

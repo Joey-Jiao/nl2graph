@@ -1,7 +1,7 @@
 import pytest
 
-from nl2graph.eval.entity import Result, GenerationResult, ExecutionResult
-from nl2graph.analytics import Analysis
+from nl2graph.data.entity import Result, GenerationResult, ExecutionResult
+from nl2graph.analysis import Analysis
 
 
 class TestAnalysis:

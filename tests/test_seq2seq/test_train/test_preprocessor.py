@@ -4,7 +4,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from nl2graph.base.configs import ConfigService
-from nl2graph.seq2seq.train.preprocessing import Preprocessing
+from nl2graph.generation.seq2seq.train.preprocessing import Preprocessing
 
 
 class TestPreprocessing:
@@ -63,7 +63,7 @@ def load_data(input_dir):
 
         return data_dir
 
-    @patch("nl2graph.seq2seq.train.preprocessing.AutoTokenizer")
+    @patch("nl2graph.generation.seq2seq.train.preprocessing.AutoTokenizer")
     def test_init(self, mock_tokenizer_class, mock_config_service, sample_config):
         mock_tokenizer = Mock()
         mock_tokenizer_class.from_pretrained.return_value = mock_tokenizer
@@ -74,7 +74,7 @@ def load_data(input_dir):
         assert preprocessing.dataset_config.special_tokens == []
         mock_tokenizer_class.from_pretrained.assert_called_once()
 
-    @patch("nl2graph.seq2seq.train.preprocessing.AutoTokenizer")
+    @patch("nl2graph.generation.seq2seq.train.preprocessing.AutoTokenizer")
     def test_process(self, mock_tokenizer_class, mock_config_service, sample_config, sample_data_dir, tmp_path):
         mock_tokenizer = Mock()
         mock_tokenizer_class.from_pretrained.return_value = mock_tokenizer

@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ..base.configs import ConfigService
-from ..seq2seq.train import ConfigLoader, Preprocessing, Training
+from ..generation.seq2seq.train import ConfigLoader, Preprocessing, Training
 
 
 class TrainPipeline:

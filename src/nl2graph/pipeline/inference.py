@@ -4,10 +4,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
-from ..eval import Record, Result, GenerationResult, ExecutionResult, Scoring, Execution
-from ..eval.repository import SourceRepository, ResultRepository
+from ..data import Record, Result, GenerationResult, ExecutionResult, ResultRepository
+from ..execution import Execution
+from ..evaluation import Scoring
 from ..base.templates.service import TemplateService
-from ..graph.schema.base import BaseSchema
+from ..execution.schema.base import BaseSchema
 
 
 @runtime_checkable

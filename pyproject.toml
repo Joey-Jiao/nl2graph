@@ -21,7 +21,11 @@ dependencies = [
     "torch",
     "transformers",
     "graphq-trans",
+    "typer>=0.9.0",
 ]
+
+[project.scripts]
+nl2graph = "nl2graph.cli:app"
 
 [project.optional-dependencies]
 dev = [

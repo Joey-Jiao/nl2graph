@@ -1,6 +1,6 @@
 import pytest
 
-from nl2graph.eval import metrics
+from nl2graph.evaluation import metrics
 
 
 class TestNormalizeAnswers:

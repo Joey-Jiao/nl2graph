@@ -1,7 +1,7 @@
 import pytest
 
-from nl2graph.eval.entity import Record, Result, GenerationResult, ExecutionResult, EvaluationResult
-from nl2graph.analytics import Reporting, Report, GroupStats
+from nl2graph.data.entity import Record, Result, GenerationResult, ExecutionResult, EvaluationResult
+from nl2graph.analysis import Reporting, Report, GroupStats
 
 
 class TestReporting:
@@ -72,17 +72,18 @@ class TestReporting:
         assert report.summary.accuracy == 2 / 3
 
     def test_generate_by_hop(self, reporting, sample_pairs):
-        report = reporting.generate(sample_pairs, "cypher--gpt-4o")
+        report = reporting.generate(sample_pairs, "cypher--gpt-4o", group_by=["hop"])
 
-        assert 1 in report.by_hop
-        assert 2 in report.by_hop
+        assert "hop" in report.by_field
+        assert "1" in report.by_field["hop"]
+        assert "2" in report.by_field["hop"]
 
-        hop1 = report.by_hop[1]
+        hop1 = report.by_field["hop"]["1"]
         assert hop1.count == 2
         assert hop1.error_count == 0
         assert hop1.accuracy == 0.5
 
-        hop2 = report.by_hop[2]
+        hop2 = report.by_field["hop"]["2"]
         assert hop2.count == 2
         assert hop2.error_count == 1
         assert hop2.accuracy == 1.0
@@ -100,5 +101,5 @@ class TestReporting:
         assert report.total == 0
         assert report.summary.count == 0
         assert report.summary.accuracy == 0.0
-        assert report.by_hop == {}
+        assert report.by_field == {}
         assert report.errors.total_errors == 0

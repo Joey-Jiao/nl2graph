@@ -1,6 +1,6 @@
 import pytest
 
-from nl2graph.graph.schema.property_graph import (
+from nl2graph.execution.schema.property_graph import (
     PropertySchema,
     NodeSchema,
     EdgeSchema,

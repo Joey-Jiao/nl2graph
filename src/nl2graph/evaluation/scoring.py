@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Tuple
 
-from .entity import Record, Result, EvaluationResult
+from ..data.entity import Record, Result, EvaluationResult
 from . import metrics
 
 

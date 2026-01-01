@@ -1,6 +1,6 @@
 import pytest
 
-from nl2graph.eval.entity import (
+from nl2graph.data.entity import (
     GenerationResult,
     ExecutionResult,
     EvaluationResult,
@@ -83,11 +83,11 @@ class TestRecord:
         assert record.id == "q001"
         assert record.question == "What is X?"
         assert record.answer == ["Y"]
-        assert record.hop is None
+        assert record.get_field("hop") is None
 
     def test_create_with_hop(self):
         record = Record(id="q001", question="Q", answer=["A"], hop=2)
-        assert record.hop == 2
+        assert record.get_field("hop") == 2
 
     def test_to_dict(self):
         record = Record(id="q001", question="Q", answer=["A"], hop=1)
@@ -103,7 +103,15 @@ class TestRecord:
         assert record.id == "q001"
         assert record.question == "Q"
         assert record.answer == ["A"]
-        assert record.hop == 1
+        assert record.get_field("hop") == 1
+
+    def test_extra_fields(self):
+        record = Record(id="q001", question="Q", answer=["A"], hop=1, split="test", custom="value")
+        assert record.get_field("hop") == 1
+        assert record.get_field("split") == "test"
+        assert record.get_field("custom") == "value"
+        assert record.get_field("nonexistent") is None
+        assert record.get_field("nonexistent", "default") == "default"
 
     def test_id_required(self):
         with pytest.raises(ValueError):

@@ -6,15 +6,6 @@ from .entity import (
     Result,
 )
 from .repository import SourceRepository, ResultRepository
-from .metrics import (
-    normalize_answers,
-    exact_match,
-    precision_recall_f1,
-    accuracy,
-    string_match,
-)
-from .scoring import Scoring
-from .execution import Execution
 
 __all__ = [
     "GenerationResult",
@@ -24,11 +15,4 @@ __all__ = [
     "Result",
     "SourceRepository",
     "ResultRepository",
-    "normalize_answers",
-    "exact_match",
-    "precision_recall_f1",
-    "accuracy",
-    "string_match",
-    "Scoring",
-    "Execution",
 ]

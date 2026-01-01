@@ -1,6 +1,6 @@
 from typing import List, Optional, Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class GenerationResult(BaseModel):
@@ -23,10 +23,11 @@ class EvaluationResult(BaseModel):
 
 
 class Record(BaseModel):
+    model_config = ConfigDict(extra='allow')
+
     id: str
     question: str
     answer: List[Any]
-    hop: Optional[int] = None
 
     def to_dict(self) -> dict:
         return self.model_dump()
@@ -34,6 +35,11 @@ class Record(BaseModel):
     @classmethod
     def from_dict(cls, data: dict) -> "Record":
         return cls.model_validate(data)
+
+    def get_field(self, field: str, default: Any = None) -> Any:
+        if hasattr(self, field):
+            return getattr(self, field)
+        return self.model_extra.get(field, default)
 
 
 class Result(BaseModel):

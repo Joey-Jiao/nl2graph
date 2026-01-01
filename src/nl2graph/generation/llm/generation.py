@@ -1,7 +1,7 @@
 from typing import List
 
-from ..base.llm.service import LLMService
-from ..base.llm.entity import LLMMessage
+from ...base.llm.service import LLMService
+from ...base.llm.entity import LLMMessage
 
 
 class Generation:

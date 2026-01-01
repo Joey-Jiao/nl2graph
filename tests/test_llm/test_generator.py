@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock
 
-from nl2graph.llm.generation import Generation
+from nl2graph.generation.llm.generation import Generation
 from nl2graph.base.llm.service import LLMService
 from nl2graph.base.configs import ConfigService
 

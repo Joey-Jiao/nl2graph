@@ -3,15 +3,16 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from nl2graph.workflow import InferencePipeline
-from nl2graph.llm.generation import Generation
-from nl2graph.eval import Execution
+from nl2graph.pipeline import InferencePipeline
+from nl2graph.generation.llm.generation import Generation
+from nl2graph.execution import Execution
 from nl2graph.base.llm.service import LLMService
 from nl2graph.base.templates.service import TemplateService
 from nl2graph.base.configs import ConfigService
-from nl2graph.eval import Record, Result, GenerationResult, ExecutionResult, Scoring
-from nl2graph.eval.repository import ResultRepository
-from nl2graph.graph.schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
+from nl2graph.data import Record, Result, GenerationResult, ExecutionResult
+from nl2graph.evaluation import Scoring
+from nl2graph.data.repository import ResultRepository
+from nl2graph.execution.schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
 
 
 @pytest.fixture

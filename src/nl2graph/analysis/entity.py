@@ -22,6 +22,6 @@ class Report(BaseModel):
     run_id: str
     total: int = 0
     summary: GroupStats = GroupStats()
-    by_hop: Dict[int, GroupStats] = {}
+    by_field: Dict[str, Dict[str, GroupStats]] = {}
     errors: ErrorAnalysis = ErrorAnalysis()
     metadata: Dict[str, Any] = {}

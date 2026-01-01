@@ -1,7 +1,7 @@
 import pytest
 
-from nl2graph.graph.result.entity import QueryResult
-from nl2graph.graph.entity import QueryLanguage
+from nl2graph.execution.result.entity import QueryResult
+from nl2graph.execution.entity import QueryLanguage
 
 
 class TestQueryResult:

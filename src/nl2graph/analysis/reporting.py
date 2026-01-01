@@ -1,7 +1,7 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional, Any
 from collections import defaultdict
 
-from ..eval.entity import Record, Result
+from ..data.entity import Record, Result
 from .entity import Report, GroupStats, ErrorAnalysis
 from .analysis import Analysis
 
@@ -11,9 +11,16 @@ class Reporting:
     def __init__(self):
         self.analysis = Analysis()
 
-    def generate(self, pairs: List[Tuple[Record, Result]], config_id: str) -> Report:
+    def generate(
+        self,
+        pairs: List[Tuple[Record, Result]],
+        config_id: str,
+        group_by: Optional[List[str]] = None,
+    ) -> Report:
         summary = self._compute_stats(pairs)
-        by_hop = self._compute_by_hop(pairs)
+        by_field = {}
+        for field in (group_by or []):
+            by_field[field] = self._compute_by_field(pairs, field)
         results = [r for _, r in pairs]
         errors = self._compute_errors(results)
 
@@ -21,7 +28,7 @@ class Reporting:
             run_id=config_id,
             total=len(pairs),
             summary=summary,
-            by_hop=by_hop,
+            by_field=by_field,
             errors=errors,
         )
 
@@ -57,15 +64,16 @@ class Reporting:
             avg_recall=sum_recall / valid if valid > 0 else 0.0,
         )
 
-    def _compute_by_hop(self, pairs: List[Tuple[Record, Result]]) -> Dict[int, GroupStats]:
-        grouped: Dict[int, List[Tuple[Record, Result]]] = defaultdict(list)
+    def _compute_by_field(self, pairs: List[Tuple[Record, Result]], field: str) -> Dict[str, GroupStats]:
+        grouped: Dict[Any, List[Tuple[Record, Result]]] = defaultdict(list)
         for record, result in pairs:
-            if record.hop is not None:
-                grouped[record.hop].append((record, result))
+            value = record.get_field(field)
+            if value is not None:
+                grouped[value].append((record, result))
 
         out = {}
-        for hop, group in sorted(grouped.items()):
-            out[hop] = self._compute_stats(group)
+        for key, group in sorted(grouped.items(), key=lambda x: str(x[0])):
+            out[str(key)] = self._compute_stats(group)
         return out
 
     def _compute_errors(self, results: List[Result]) -> ErrorAnalysis:

@@ -2,7 +2,7 @@ import re
 from typing import List, Dict, Set
 from collections import Counter
 
-from ..eval.entity import Result
+from ..data.entity import Result
 
 
 class Analysis:

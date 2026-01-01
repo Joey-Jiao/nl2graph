@@ -3,8 +3,8 @@ import tempfile
 import json
 from pathlib import Path
 
-from nl2graph.eval.repository import SourceRepository, ResultRepository
-from nl2graph.eval.entity import (
+from nl2graph.data.repository import SourceRepository, ResultRepository
+from nl2graph.data.entity import (
     Record,
     Result,
     GenerationResult,
@@ -66,10 +66,10 @@ class TestSourceRepository:
         ids = {r.id for r in records}
         assert ids == {"q001", "q002", "q003"}
 
-    def test_iter_by_hop(self, src, sample_json):
+    def test_iter_by_filter(self, src, sample_json):
         src.init_from_json(sample_json)
-        hop1 = list(src.iter_by_hop(1))
-        hop2 = list(src.iter_by_hop(2))
+        hop1 = list(src.iter_by_filter(hop=1))
+        hop2 = list(src.iter_by_filter(hop=2))
         assert len(hop1) == 2
         assert len(hop2) == 1
 
