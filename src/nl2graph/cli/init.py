@@ -12,7 +12,7 @@ def init(
     dataset: str = typer.Argument(..., help="Dataset name (metaqa, kqapro, openreview)"),
     json_path: Optional[Path] = typer.Option(None, "--json", "-j", help="Override data.json path"),
 ):
-    """Initialize src.db from data.json."""
+    """Initialize src.db and dst.db for a dataset."""
     ctx = get_context()
     config = ctx.resolve(ConfigService)
 
@@ -31,12 +31,22 @@ def init(
         typer.echo(f"Error: No src.db path configured for dataset '{dataset}'", err=True)
         raise typer.Exit(1)
 
-    typer.echo(f"Initializing {src_path} from {data_path}...")
+    dst_path = config.get(f"data.{dataset}.dst")
+    if not dst_path:
+        typer.echo(f"Error: No dst.db path configured for dataset '{dataset}'", err=True)
+        raise typer.Exit(1)
 
+    typer.echo(f"Initializing src.db from {data_path}...")
     with SourceRepository(src_path) as src:
         count = src.init_from_json(str(data_path))
+    typer.echo(f"  -> Loaded {count} records into {src_path}")
 
-    typer.echo(f"Done. Loaded {count} records.")
+    typer.echo(f"Initializing dst.db...")
+    with ResultRepository(dst_path) as dst:
+        pass
+    typer.echo(f"  -> Created {dst_path}")
+
+    typer.echo("Done.")
 
 
 def export(

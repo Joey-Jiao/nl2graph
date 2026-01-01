@@ -116,6 +116,13 @@ class TestAnalysis:
         category = analysis._classify_error("no query to execute")
         assert category == "no_query"
 
+    def test_classify_error_missing_label(self, analysis):
+        assert analysis._classify_error("Label 'Person' not found") == "missing_label"
+        assert analysis._classify_error("Unknown node type") == "missing_label"
+
+    def test_classify_error_missing_property(self, analysis):
+        assert analysis._classify_error("Property 'name' does not exist") == "missing_property"
+
     def test_classify_error_other(self, analysis):
         category = analysis._classify_error("Some weird error message")
         assert category == "other"
