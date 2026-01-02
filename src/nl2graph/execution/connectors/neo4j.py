@@ -57,7 +57,10 @@ class Neo4jConnector(BaseConnector):
         self.sanity = kwargs.get('sanity', [])
 
     def connect(self) -> None:
+        import logging
         from neo4j import GraphDatabase
+
+        logging.getLogger("neo4j").setLevel(logging.ERROR)
 
         uri = f"bolt://{self.host}:{self.port}"
         self._driver = GraphDatabase.driver(

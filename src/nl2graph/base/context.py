@@ -3,7 +3,6 @@ from pathlib import Path
 import punq
 
 from .configs import ConfigService
-from .log import LogService
 from .models.service import ModelService
 from .llm.service import LLMService
 from .templates.service import TemplateService
@@ -31,9 +30,6 @@ def get_context(
     config_files = list(Path(config_dir).glob("*.yaml"))
     config_service = ConfigService(config_dir=config_files, env_path=env_path)
     container.register(ConfigService, instance=config_service)
-
-    log_service = LogService(config=config_service)
-    container.register(LogService, instance=log_service)
 
     llm_service = LLMService(config=config_service)
     container.register(LLMService, instance=llm_service)

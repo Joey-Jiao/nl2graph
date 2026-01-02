@@ -7,5 +7,5 @@ __all__ = [
     "BaseAdapter",
     "OpenAIAdapter",
     "DeepSeekAdapter",
-    "VLLMAdapter"
+    "VLLMAdapter",
 ]

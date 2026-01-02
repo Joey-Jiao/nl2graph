@@ -38,7 +38,7 @@ def report(
     with SourceRepository(src_path) as src, ResultRepository(dst_path) as dst:
         pairs = []
         for result in dst.iter_by_config(method, lang, model):
-            record = src.get(result.record_id)
+            record = src.get(result.question_id)
             if record:
                 pairs.append((record, result))
 

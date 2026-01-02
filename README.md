@@ -120,19 +120,19 @@ The composite key `(question_id, method, lang, model)` allows multiple experimen
 
 ### LLM
 
-| Dataset | Model | Data Prep | Gen | Exec | Eval |
-|---------|-------|:---------:|:---:|:----:|:----:|
-| openreview | deepseek-chat | [ ] | [ ] | [ ] | [ ] |
-| openreview | deepseek-reasoner | [ ] | [ ] | [ ] | [ ] |
-| metaqa | deepseek-chat | [x] | [x] | [ ] | [ ] |
-| metaqa | deepseek-reasoner | [x] | [x]  | [ ] | [ ] |
-| webqsp | deepseek-chat | [ ] | [ ] | [ ] | [ ] |
-| webqsp | deepseek-reasoner | [ ] | [ ] | [ ] | [ ] |
+| Dataset | Model | Gen | Exec | Eval | Acc | F1 |
+|---------|-------|:---:|:----:|:----:|----:|---:|
+| metaqa | deepseek-chat | [x] | [x] | [x] | 78.8% | 80.9% |
+| metaqa | deepseek-reasoner | [x] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-chat | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-reasoner | [ ] | [ ] | [ ] | - | - |
 
 ### Seq2Seq
 
-| Dataset | Data Prep | Pretrain | Posttrain | Gen | Exec | Eval |
-|---------|:---------:|:--------:|:---------:|:---:|:----:|:----:|
-| openreview | [ ] | [x] |    [ ]    | [ ] | [ ] | [ ] |
-| metaqa | [x] | [x] |    [x]    | [ ] | [ ] | [ ] |
-| webqsp | [ ] | [x] |    [ ]    | [ ] | [ ] | [ ] |
+| Dataset | Pretrain | Posttrain | Gen | Exec | Eval | Acc | F1 |
+|---------|:--------:|:---------:|:---:|:----:|:----:|----:|---:|
+| metaqa | [x] | [x] | [ ] | [ ] | [ ] | - | - |
+| openreview | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| webqsp | [x] | [ ] | [ ] | [ ] | [ ] | - | - |

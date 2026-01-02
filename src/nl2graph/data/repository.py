@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import threading
 from typing import Optional, Iterator, List, Any
 from pathlib import Path
 
@@ -12,9 +13,17 @@ class SourceRepository:
     def __init__(self, db_path: str):
         self._db_path = Path(db_path)
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._db_path))
-        self._conn.row_factory = sqlite3.Row
+        self._local = threading.local()
         self._ensure_table()
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        if not hasattr(self._local, 'conn'):
+            conn = sqlite3.connect(str(self._db_path), timeout=30, isolation_level=None)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            self._local.conn = conn
+        return self._local.conn
 
     def _ensure_table(self) -> None:
         self._conn.execute(f"""
@@ -25,7 +34,6 @@ class SourceRepository:
                 extra TEXT
             )
         """)
-        self._conn.commit()
 
     def init_from_json(self, json_path: str) -> int:
         with open(json_path, "r", encoding="utf-8") as f:
@@ -41,7 +49,6 @@ class SourceRepository:
                 f"INSERT OR REPLACE INTO {self.TABLE} (id, question, answer, extra) VALUES (?, ?, ?, ?)",
                 (id_, question, json.dumps(answer, ensure_ascii=False), json.dumps(extra, ensure_ascii=False) if extra else None)
             )
-        self._conn.commit()
         return len(records)
 
     def _row_to_record(self, row: sqlite3.Row) -> Record:
@@ -85,7 +92,9 @@ class SourceRepository:
                 yield record
 
     def close(self) -> None:
-        self._conn.close()
+        if hasattr(self._local, 'conn'):
+            self._local.conn.close()
+            del self._local.conn
 
     def __enter__(self):
         return self
@@ -100,9 +109,17 @@ class ResultRepository:
     def __init__(self, db_path: str):
         self._db_path = Path(db_path)
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(str(self._db_path))
-        self._conn.row_factory = sqlite3.Row
+        self._local = threading.local()
         self._ensure_table()
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        if not hasattr(self._local, 'conn'):
+            conn = sqlite3.connect(str(self._db_path), timeout=30, isolation_level=None)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            self._local.conn = conn
+        return self._local.conn
 
     def _ensure_table(self) -> None:
         self._conn.execute(f"""
@@ -117,7 +134,6 @@ class ResultRepository:
                 PRIMARY KEY (question_id, method, lang, model)
             )
         """)
-        self._conn.commit()
 
     def _row_to_result(self, row: sqlite3.Row) -> Result:
         gen = GenerationResult.model_validate(json.loads(row["gen"])) if row["gen"] else None
@@ -166,7 +182,6 @@ class ResultRepository:
             ON CONFLICT (question_id, method, lang, model)
             DO UPDATE SET gen = excluded.gen, exec = NULL, eval = NULL
         """, (question_id, method, lang, model, gen_json))
-        self._conn.commit()
 
     def save_execution(
         self,
@@ -181,7 +196,6 @@ class ResultRepository:
             UPDATE {self.TABLE} SET exec = ?, eval = NULL
             WHERE question_id = ? AND method = ? AND lang = ? AND model = ?
         """, (exec_json, question_id, method, lang, model))
-        self._conn.commit()
 
     def save_evaluation(
         self,
@@ -196,7 +210,6 @@ class ResultRepository:
             UPDATE {self.TABLE} SET eval = ?
             WHERE question_id = ? AND method = ? AND lang = ? AND model = ?
         """, (eval_json, question_id, method, lang, model))
-        self._conn.commit()
 
     def count(self) -> int:
         cursor = self._conn.execute(f"SELECT COUNT(*) FROM {self.TABLE}")
@@ -243,11 +256,12 @@ class ResultRepository:
             UPDATE {self.TABLE} SET {cascade[stage]}
             WHERE method = ? AND lang = ? AND model = ?
         """, (method, lang, model))
-        self._conn.commit()
         return cursor.rowcount
 
     def close(self) -> None:
-        self._conn.close()
+        if hasattr(self._local, 'conn'):
+            self._local.conn.close()
+            del self._local.conn
 
     def __enter__(self):
         return self

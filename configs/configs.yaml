@@ -92,7 +92,7 @@ data:
     connection:
       cypher:
         host: localhost
-        port: 7687
+        port: 7601
         username: neo4j
         password: MetaQANeo4j
         database: neo4j
@@ -113,7 +113,7 @@ data:
     connection:
       cypher:
         host: localhost
-        port: 7687
+        port: 7602
         username: neo4j
         password: OpenReviewNeo4j
         database: neo4j
