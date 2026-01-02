@@ -13,7 +13,6 @@ nl2graph
 │   ├── -m, --method <llm|seq2seq>    Generation method (required)
 │   ├── --model <name>                Model name (required)
 │   ├── -l, --lang <lang>             Query language: cypher, sparql, kopl (required)
-│   ├── [-t, --template <name>]       Prompt template name
 │   ├── [--ir]                        Enable IR mode (seq2seq)
 │   ├── [--hop <n>]                   Filter by hop
 │   ├── [--split <name>]              Filter by split
@@ -58,7 +57,7 @@ nl2graph
 
 ```bash
 nl2graph init metaqa
-nl2graph generate metaqa -m llm --model gpt-4o -l cypher -t cypher
+nl2graph generate metaqa -m llm --model gpt-4o -l cypher
 nl2graph execute metaqa -m llm --model gpt-4o -l cypher
 nl2graph evaluate metaqa -m llm --model gpt-4o -l cypher
 nl2graph report metaqa -m llm --model gpt-4o -l cypher
@@ -109,3 +108,24 @@ src.db (read-only)                    dst.db (read-write)
 | `eval` | JSON | EvaluationResult |
 
 The composite key `(record_id, method, lang, model)` allows multiple experiment results for the same record.
+
+## Progress
+
+### LLM
+
+| Dataset | Model | Data Prep | Gen | Exec | Eval |
+|---------|-------|:---------:|:---:|:----:|:----:|
+| openreview | deepseek-chat | [ ] | [ ] | [ ] | [ ] |
+| openreview | deepseek-reasoner | [ ] | [ ] | [ ] | [ ] |
+| metaqa | deepseek-chat | [x] | [x] | [ ] | [ ] |
+| metaqa | deepseek-reasoner | [x] | [x]  | [ ] | [ ] |
+| webqsp | deepseek-chat | [ ] | [ ] | [ ] | [ ] |
+| webqsp | deepseek-reasoner | [ ] | [ ] | [ ] | [ ] |
+
+### Seq2Seq
+
+| Dataset | Data Prep | Pretrain | Posttrain | Gen | Exec | Eval |
+|---------|:---------:|:--------:|:---------:|:---:|:----:|:----:|
+| openreview | [ ] | [x] |    [ ]    | [ ] | [ ] | [ ] |
+| metaqa | [x] | [x] |    [x]    | [ ] | [ ] | [ ] |
+| webqsp | [ ] | [x] |    [ ]    | [ ] | [ ] | [ ] |

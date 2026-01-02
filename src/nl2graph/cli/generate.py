@@ -18,7 +18,6 @@ def generate(
     method: str = typer.Option(..., "--method", "-m", help="Generation method: llm or seq2seq"),
     model: str = typer.Option(..., "--model", help="Model name"),
     lang: str = typer.Option(..., "--lang", "-l", help="Query language: cypher, sparql, kopl"),
-    template: Optional[str] = typer.Option(None, "--template", "-t", help="Prompt template name"),
     ir: bool = typer.Option(False, "--ir", help="Enable IR mode (seq2seq)"),
     hop: Optional[int] = typer.Option(None, "--hop", help="Filter by hop"),
     split: Optional[str] = typer.Option(None, "--split", help="Filter by split"),
@@ -35,13 +34,24 @@ def generate(
         typer.echo(f"Error: src.db not found. Run 'nl2graph init {dataset}' first.", err=True)
         raise typer.Exit(1)
 
-    generator = _create_generator(ctx, config, method, model)
+    provider = None
+    if method == "llm":
+        provider = _detect_provider(model)
+        if not provider:
+            typer.echo(f"Error: Unknown model provider for '{model}'", err=True)
+            raise typer.Exit(1)
+
+    generator = _create_generator(ctx, config, method, model, provider)
     if generator is None:
         raise typer.Exit(1)
 
     template_service = None
-    if template:
-        template_service = ctx.resolve(TemplateService)
+    template_name = None
+    if method == "llm":
+        template_path = config.get(f"templates.prompts.{lang}")
+        if template_path:
+            template_service = ctx.resolve(TemplateService)
+            template_name = lang
 
     translator = None
     if ir:
@@ -62,7 +72,7 @@ def generate(
             generator=generator,
             dst=dst,
             template_service=template_service,
-            template_name=template,
+            template_name=template_name,
             translator=translator,
             method=method,
             lang=lang,
@@ -77,14 +87,9 @@ def generate(
     typer.echo("Done.")
 
 
-def _create_generator(ctx, config: ConfigService, method: str, model: str):
+def _create_generator(ctx, config: ConfigService, method: str, model: str, provider: Optional[str] = None):
     if method == "llm":
         llm_service = ctx.resolve(LLMService)
-        provider = _detect_provider(model)
-        if not provider:
-            typer.echo(f"Error: Unknown model provider for '{model}'", err=True)
-            return None
-
         from ..generation.llm.generation import Generation
         return Generation(llm_service, provider, model)
 
