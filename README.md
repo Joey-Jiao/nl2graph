@@ -52,6 +52,12 @@ nl2graph
 ├── export <dataset>                  Export dst.db to JSON
 │   └── [-o, --output <path>]         Output JSON path
 │
+├── clear <dataset>                   Clear results from dst.db
+│   ├── -m, --method <llm|seq2seq>    Generation method (required)
+│   ├── --model <name>                Model name (required)
+│   ├── -l, --lang <lang>             Query language (required)
+│   └── [-s, --stage <gen|exec|eval>] Stage to clear (default: gen, cascades)
+│
 └── ls <resource>                     List resources
     └── resource: datasets | models | checkpoints | templates
 ```

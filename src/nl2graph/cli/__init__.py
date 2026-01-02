@@ -7,6 +7,7 @@ from .execute import execute
 from .evaluate import evaluate
 from .train import train
 from .report import report
+from .clear import clear
 
 app = typer.Typer(
     name="nl2graph",
@@ -22,3 +23,4 @@ app.command()(execute)
 app.command()(evaluate)
 app.command()(train)
 app.command()(report)
+app.command()(clear)

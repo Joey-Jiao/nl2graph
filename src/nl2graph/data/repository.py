@@ -230,6 +230,22 @@ class ResultRepository:
             json.dump(results, f, ensure_ascii=False, indent=2)
         return results
 
+    def clear_stage(self, method: str, lang: str, model: str, stage: str) -> int:
+        cascade = {
+            "gen": "gen = NULL, exec = NULL, eval = NULL",
+            "exec": "exec = NULL, eval = NULL",
+            "eval": "eval = NULL",
+        }
+        if stage not in cascade:
+            raise ValueError(f"Invalid stage: {stage}")
+
+        cursor = self._conn.execute(f"""
+            UPDATE {self.TABLE} SET {cascade[stage]}
+            WHERE method = ? AND lang = ? AND model = ?
+        """, (method, lang, model))
+        self._conn.commit()
+        return cursor.rowcount
+
     def close(self) -> None:
         self._conn.close()
 
