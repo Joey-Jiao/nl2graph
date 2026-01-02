@@ -51,26 +51,6 @@ class TestGeneration:
         mock_service.get_client.assert_called_once_with("openai", "gpt-4o-mini")
         mock_client.chat.assert_called_once()
 
-    def test_generate_batch_mock(self):
-        mock_service = Mock(spec=LLMService)
-        mock_client = Mock()
-        mock_response = Mock()
-        mock_response.content = "MATCH (n) RETURN n"
-        mock_client.chat.return_value = mock_response
-        mock_service.get_client.return_value = mock_client
-
-        gen = Generation(
-            llm_service=mock_service,
-            provider="openai",
-            model="gpt-4o-mini",
-        )
-
-        results = gen.generate_batch(["prompt1", "prompt2"])
-
-        assert len(results) == 2
-        assert results[0] == "MATCH (n) RETURN n"
-        assert results[1] == "MATCH (n) RETURN n"
-
 
 class TestGenerationIntegration:
 

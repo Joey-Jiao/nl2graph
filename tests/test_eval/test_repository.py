@@ -96,7 +96,7 @@ class TestResultRepository:
         dst.save_generation("q001", "llm", "cypher", "gpt-4o", gen)
         result = dst.get("q001", "llm", "cypher", "gpt-4o")
         assert result is not None
-        assert result.record_id == "q001"
+        assert result.question_id == "q001"
         assert result.gen.query == "MATCH (n) RETURN n"
         assert result.exec is None
         assert result.eval is None
@@ -172,11 +172,11 @@ class TestResultRepository:
         results = list(dst.iter_all())
         assert len(results) == 2
 
-    def test_iter_by_record(self, dst):
+    def test_iter_by_question(self, dst):
         dst.save_generation("q001", "llm", "cypher", "gpt-4o", GenerationResult())
         dst.save_generation("q001", "seq2seq", "cypher", "bart", GenerationResult())
         dst.save_generation("q002", "llm", "cypher", "gpt-4o", GenerationResult())
-        results = list(dst.iter_by_record("q001"))
+        results = list(dst.iter_by_question("q001"))
         assert len(results) == 2
 
     def test_iter_by_config(self, dst):
@@ -185,27 +185,6 @@ class TestResultRepository:
         dst.save_generation("q001", "seq2seq", "cypher", "bart", GenerationResult())
         results = list(dst.iter_by_config("llm", "cypher", "gpt-4o"))
         assert len(results) == 2
-
-    def test_iter_pending(self, dst):
-        with tempfile.TemporaryDirectory() as tmpdir:
-            src_path = Path(tmpdir) / "src.db"
-            json_path = Path(tmpdir) / "records.json"
-            with open(json_path, "w") as f:
-                json.dump([
-                    {"id": "q001", "question": "Q1", "answer": [1]},
-                    {"id": "q002", "question": "Q2", "answer": [2]},
-                    {"id": "q003", "question": "Q3", "answer": [3]},
-                ], f)
-            src = SourceRepository(str(src_path))
-            src.init_from_json(str(json_path))
-            dst.save_generation("q001", "llm", "cypher", "gpt-4o", GenerationResult())
-            dst.save_execution("q001", "llm", "cypher", "gpt-4o", ExecutionResult(success=True))
-            dst.save_evaluation("q001", "llm", "cypher", "gpt-4o", EvaluationResult(exact_match=1.0))
-            dst.save_generation("q002", "llm", "cypher", "gpt-4o", GenerationResult())
-            pending = list(dst.iter_pending(src, "llm", "cypher", "gpt-4o"))
-            pending_ids = {r.id for r in pending}
-            assert pending_ids == {"q002", "q003"}
-            src.close()
 
     def test_export_json(self, dst):
         dst.save_generation("q001", "llm", "cypher", "gpt-4o", GenerationResult(query="Q1"))

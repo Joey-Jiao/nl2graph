@@ -16,7 +16,7 @@ class TestReporting:
 
         r1 = Record(id="q001", question="Q1", answer=["A1"], hop=1)
         res1 = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -28,7 +28,7 @@ class TestReporting:
 
         r2 = Record(id="q002", question="Q2", answer=["A2"], hop=1)
         res2 = Result(
-            record_id="q002",
+            question_id="q002",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -40,7 +40,7 @@ class TestReporting:
 
         r3 = Record(id="q003", question="Q3", answer=["A3"], hop=2)
         res3 = Result(
-            record_id="q003",
+            question_id="q003",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -51,7 +51,7 @@ class TestReporting:
 
         r4 = Record(id="q004", question="Q4", answer=["A4"], hop=2)
         res4 = Result(
-            record_id="q004",
+            question_id="q004",
             method="llm",
             lang="cypher",
             model="gpt-4o",

@@ -18,10 +18,8 @@ class Generation:
         device: Optional[str] = None,
     ):
         self.max_length = 512
-        self.batch_size = 32
         if config_service:
             self.max_length = config_service.get("seq2seq.max_length", 512)
-            self.batch_size = config_service.get("seq2seq.inference.batch_size", 32)
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -67,46 +65,3 @@ class Generation:
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False,
         )
-
-    def generate_batch(
-        self,
-        texts: List[str],
-        max_length: Optional[int] = None,
-        batch_size: Optional[int] = None,
-    ) -> List[str]:
-        max_length = max_length or self.max_length
-        batch_size = batch_size or self.batch_size
-        predictions = []
-
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i:i + batch_size]
-
-            encoded = self.tokenizer(
-                batch,
-                return_tensors="pt",
-                padding=True,
-                truncation=True,
-                max_length=max_length,
-            )
-
-            input_ids = encoded["input_ids"].to(self.device)
-            attention_mask = encoded["attention_mask"].to(self.device)
-
-            with torch.no_grad():
-                outputs = self.model.generate(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask,
-                    max_length=max_length,
-                )
-
-            batch_predictions = [
-                self.tokenizer.decode(
-                    output,
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=False,
-                )
-                for output in outputs
-            ]
-            predictions.extend(batch_predictions)
-
-        return predictions

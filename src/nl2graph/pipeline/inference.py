@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
-from ..data import Record, Result, GenerationResult, ExecutionResult, ResultRepository
+from ..data import Record, GenerationResult, ExecutionResult, ResultRepository
 from ..execution import Execution
 from ..evaluation import Scoring
 from ..base.templates.service import TemplateService
@@ -16,7 +16,8 @@ class Generator(Protocol):
 
     def generate(self, text: str) -> str: ...
 
-    def generate_batch(self, texts: List[str]) -> List[str]: ...
+
+IfExists = Literal["skip", "override"]
 
 
 class InferencePipeline:
@@ -36,6 +37,7 @@ class InferencePipeline:
         ir_mode: bool = False,
         extract_query: bool = False,
         workers: int = 1,
+        if_exists: IfExists = "skip",
     ):
         self.generator = generator
         self.dst = dst
@@ -50,6 +52,7 @@ class InferencePipeline:
         self.ir_mode = ir_mode
         self.extract_query = extract_query
         self.workers = workers
+        self.if_exists = if_exists
 
     def _build_prompt(self, question: str, schema: BaseSchema) -> str:
         return self.template_service.render(
@@ -84,54 +87,75 @@ class InferencePipeline:
         return ir
 
     def generate(self, records: List[Record], schema: Optional[BaseSchema] = None) -> List[Record]:
-        questions = [r.question for r in records]
+        if self.if_exists == "skip":
+            pending = [r for r in records if not self.dst.exists(r.id, self.method, self.lang, self.model)]
+            if len(pending) < len(records):
+                tqdm.write(f"Skipping {len(records) - len(pending)} existing records")
+        else:
+            pending = records
+
+        if not pending:
+            return records
 
         if self.template_service and self.template_name and schema:
-            inputs = [self._build_prompt(q, schema) for q in questions]
+            inputs = [(r, self._build_prompt(r.question, schema)) for r in pending]
         else:
-            inputs = questions
+            inputs = [(r, r.question) for r in pending]
 
         if self.workers > 1:
-            outputs = self._generate_parallel(inputs)
+            self._generate_parallel(inputs)
         else:
-            outputs = self.generator.generate_batch(inputs)
-
-        if self.translator and self.ir_mode:
-            queries = [self._translate_ir(o) for o in outputs]
-        elif self.extract_query:
-            queries = [self._extract_query(o) for o in outputs]
-        else:
-            queries = outputs
-
-        for record, raw, query in zip(records, outputs, queries):
-            gen = GenerationResult(
-                query_raw=raw,
-                query=query,
-                ir=raw if self.ir_mode else None,
-            )
-            self.dst.save_generation(record.id, self.method, self.lang, self.model, gen)
+            for record, prompt in tqdm(inputs, desc="Generating"):
+                raw = self.generator.generate(prompt)
+                self._save_one(record, raw)
 
         return records
 
-    def _generate_parallel(self, inputs: List[str]) -> List[str]:
-        results: dict[int, str] = {}
+    def _save_one(self, record: Record, raw: str) -> None:
+        if self.translator and self.ir_mode:
+            query = self._translate_ir(raw)
+        elif self.extract_query:
+            query = self._extract_query(raw)
+        else:
+            query = raw
+
+        gen = GenerationResult(query=query)
+        self.dst.save_generation(record.id, self.method, self.lang, self.model, gen)
+
+    def _generate_parallel(self, inputs: List[tuple[Record, str]]) -> None:
         with ThreadPoolExecutor(max_workers=self.workers) as executor:
-            future_to_idx = {
-                executor.submit(self.generator.generate, inp): i
-                for i, inp in enumerate(inputs)
+            future_to_record = {
+                executor.submit(self.generator.generate, prompt): record
+                for record, prompt in inputs
             }
-            for future in tqdm(as_completed(future_to_idx), total=len(inputs), desc="Generating"):
-                idx = future_to_idx[future]
-                results[idx] = future.result()
-        return [results[i] for i in range(len(inputs))]
+            for future in tqdm(as_completed(future_to_record), total=len(inputs), desc="Generating"):
+                record = future_to_record[future]
+                raw = future.result()
+                self._save_one(record, raw)
 
     def execute(self, records: List[Record]) -> List[Record]:
-        valid_records = [r for r in records if self.dst.exists(r.id, self.method, self.lang, self.model)]
+        has_gen = [r for r in records if self.dst.exists(r.id, self.method, self.lang, self.model)]
+        if len(has_gen) < len(records):
+            tqdm.write(f"Skipping {len(records) - len(has_gen)} records without generation")
+
+        if self.if_exists == "skip":
+            pending = []
+            for r in has_gen:
+                result = self.dst.get(r.id, self.method, self.lang, self.model)
+                if result.exec is None:
+                    pending.append(r)
+            if len(pending) < len(has_gen):
+                tqdm.write(f"Skipping {len(has_gen) - len(pending)} existing records")
+        else:
+            pending = has_gen
+
+        if not pending:
+            return records
 
         if self.workers > 1:
-            self._execute_parallel(valid_records)
+            self._execute_parallel(pending)
         else:
-            for record in tqdm(valid_records, desc="Executing"):
+            for record in tqdm(pending, desc="Executing"):
                 result = self.dst.get(record.id, self.method, self.lang, self.model)
                 exec_result = self.execution.execute(result)
                 self.dst.save_execution(record.id, self.method, self.lang, self.model, exec_result)
@@ -152,9 +176,31 @@ class InferencePipeline:
                 self.dst.save_execution(record.id, self.method, self.lang, self.model, exec_result)
 
     def evaluate(self, records: List[Record]) -> List[Record]:
-        valid_records = [r for r in records if self.dst.exists(r.id, self.method, self.lang, self.model)]
+        has_exec = []
+        for r in records:
+            if not self.dst.exists(r.id, self.method, self.lang, self.model):
+                continue
+            result = self.dst.get(r.id, self.method, self.lang, self.model)
+            if result.exec is not None:
+                has_exec.append(r)
+        if len(has_exec) < len(records):
+            tqdm.write(f"Skipping {len(records) - len(has_exec)} records without execution")
 
-        for record in tqdm(valid_records, desc="Evaluating"):
+        if self.if_exists == "skip":
+            pending = []
+            for r in has_exec:
+                result = self.dst.get(r.id, self.method, self.lang, self.model)
+                if result.eval is None:
+                    pending.append(r)
+            if len(pending) < len(has_exec):
+                tqdm.write(f"Skipping {len(has_exec) - len(pending)} existing records")
+        else:
+            pending = has_exec
+
+        if not pending:
+            return records
+
+        for record in tqdm(pending, desc="Evaluating"):
             result = self.dst.get(record.id, self.method, self.lang, self.model)
             eval_result = self.scoring.evaluate(record, result)
             self.dst.save_evaluation(record.id, self.method, self.lang, self.model, eval_result)

@@ -15,8 +15,7 @@ class TestInferencePipeline:
     @pytest.fixture
     def mock_generator(self):
         generator = Mock()
-        generator.generate.return_value = "MATCH (n) RETURN n"
-        generator.generate_batch.return_value = [
+        generator.generate.side_effect = [
             "MATCH (n) RETURN n",
             "MATCH (m) RETURN m",
         ]
@@ -72,7 +71,7 @@ class TestInferencePipeline:
         result = pipeline.generate(records)
 
         assert len(result) == 2
-        mock_generator.generate_batch.assert_called_once_with(["Q1", "Q2"])
+        assert mock_generator.generate.call_count == 2
 
         res1 = dst.get("q001", "seq2seq", "cypher", "bart-base")
         res2 = dst.get("q002", "seq2seq", "cypher", "bart-base")
@@ -103,15 +102,14 @@ class TestInferencePipeline:
 
         result = pipeline.generate(records, schema=mock_schema)
 
-        mock_generator.generate_batch.assert_called_once_with(["prompt1", "prompt2"])
+        assert mock_generator.generate.call_count == 2
 
-    def test_generate_with_extract_query(self, mock_generator, dst):
-        mock_generator.generate_batch.return_value = [
-            "```cypher\nMATCH (n) RETURN n\n```",
-        ]
+    def test_generate_with_extract_query(self, dst):
+        mock_gen = Mock()
+        mock_gen.generate.return_value = "```cypher\nMATCH (n) RETURN n\n```"
 
         pipeline = InferencePipeline(
-            generator=mock_generator,
+            generator=mock_gen,
             dst=dst,
             extract_query=True,
             method="llm",
@@ -123,17 +121,17 @@ class TestInferencePipeline:
         result = pipeline.generate(records)
 
         res = dst.get("q001", "llm", "cypher", "gpt-4o")
-        assert res.gen.query_raw == "```cypher\nMATCH (n) RETURN n\n```"
         assert res.gen.query == "MATCH (n) RETURN n"
 
-    def test_generate_with_ir_mode(self, mock_generator, dst):
+    def test_generate_with_ir_mode(self, dst):
+        mock_gen = Mock()
+        mock_gen.generate.return_value = "IR_representation"
+
         mock_translator = Mock()
         mock_translator.to_cypher.return_value = "MATCH (translated) RETURN translated"
 
-        mock_generator.generate_batch.return_value = ["IR_representation"]
-
         pipeline = InferencePipeline(
-            generator=mock_generator,
+            generator=mock_gen,
             dst=dst,
             translator=mock_translator,
             method="seq2seq",
@@ -146,7 +144,6 @@ class TestInferencePipeline:
         result = pipeline.generate(records)
 
         res = dst.get("q001", "seq2seq", "cypher", "bart-base")
-        assert res.gen.ir == "IR_representation"
         assert res.gen.query == "MATCH (translated) RETURN translated"
 
     def test_execute(self, mock_generator, mock_execution, dst):

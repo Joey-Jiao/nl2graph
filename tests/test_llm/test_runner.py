@@ -116,7 +116,6 @@ class TestLLMPipelineReal:
 
         records = pipeline.generate(records, movie_schema)
         res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
-        print(f"[Generated Query Raw]: {res.gen.query_raw}")
         print(f"[Generated Query]: {res.gen.query}")
         assert res.gen.query is not None
 
@@ -173,7 +172,6 @@ class TestLLMPipelineReal:
 
         records = pipeline.generate(records, movie_schema)
         res = dst.get("q001", "llm", "cypher", "deepseek-chat")
-        print(f"[Generated Query Raw]: {res.gen.query_raw}")
         print(f"[Generated Query]: {res.gen.query}")
         assert res.gen.query is not None
 
@@ -202,7 +200,7 @@ class TestExecution:
         execution = Execution(mock_connector)
 
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -218,7 +216,7 @@ class TestExecution:
         execution = Execution(mock_connector)
 
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -234,7 +232,7 @@ class TestExecution:
         execution = Execution(mock_connector)
 
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",

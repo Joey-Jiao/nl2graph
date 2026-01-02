@@ -8,7 +8,7 @@ from ..base.configs import ConfigService
 from ..execution.service import GraphService
 from ..execution import Execution
 from ..data.repository import SourceRepository, ResultRepository
-from ..pipeline.inference import InferencePipeline
+from ..pipeline.inference import InferencePipeline, IfExists
 
 
 def execute(
@@ -19,6 +19,7 @@ def execute(
     hop: Optional[int] = typer.Option(None, "--hop", help="Filter by hop"),
     split: Optional[str] = typer.Option(None, "--split", help="Filter by split"),
     workers: int = typer.Option(1, "--workers", "-w", help="Number of parallel workers"),
+    if_exists: IfExists = typer.Option("skip", "--if-exists", help="Action when record exists: skip or override"),
 ):
     """Execute generated queries against database."""
     ctx = get_context()
@@ -48,13 +49,14 @@ def execute(
         typer.echo(f"Executing for {len(records)} records...")
 
         pipeline = InferencePipeline(
-            generator=_dummy_generator(),
+            generator=_DummyGenerator(),
             dst=dst,
             execution=execution,
             method=method,
             lang=lang,
             model=model,
             workers=workers,
+            if_exists=if_exists,
         )
 
         pipeline.execute(records)
@@ -62,13 +64,9 @@ def execute(
     typer.echo("Done.")
 
 
-def _dummy_generator():
-    class DummyGenerator:
-        def generate(self, text: str) -> str:
-            return ""
-        def generate_batch(self, texts):
-            return [""] * len(texts)
-    return DummyGenerator()
+class _DummyGenerator:
+    def generate(self, text: str) -> str:
+        return ""
 
 
 def _load_records(src: SourceRepository, hop: Optional[int], split: Optional[str]):

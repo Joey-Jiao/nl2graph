@@ -13,19 +13,11 @@ class TestGenerationResult:
 
     def test_create_empty(self):
         result = GenerationResult()
-        assert result.query_raw is None
         assert result.query is None
-        assert result.ir is None
 
     def test_create_with_values(self):
-        result = GenerationResult(
-            query_raw="MATCH (n) RETURN n",
-            query="MATCH (n) RETURN n",
-            ir="some_ir_repr",
-        )
-        assert result.query_raw == "MATCH (n) RETURN n"
+        result = GenerationResult(query="MATCH (n) RETURN n")
         assert result.query == "MATCH (n) RETURN n"
-        assert result.ir == "some_ir_repr"
 
 
 class TestExecutionResult:
@@ -122,12 +114,12 @@ class TestResult:
 
     def test_create_minimal(self):
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
         )
-        assert result.record_id == "q001"
+        assert result.question_id == "q001"
         assert result.method == "llm"
         assert result.lang == "cypher"
         assert result.model == "gpt-4o"
@@ -137,7 +129,7 @@ class TestResult:
 
     def test_create_with_nested(self):
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="seq2seq",
             lang="sparql",
             model="bart",
@@ -152,24 +144,24 @@ class TestResult:
 
     def test_method_literal_validation(self):
         with pytest.raises(ValueError):
-            Result(record_id="q001", method="invalid", lang="cypher", model="test")
+            Result(question_id="q001", method="invalid", lang="cypher", model="test")
 
     def test_to_dict(self):
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
             gen=GenerationResult(query="MATCH..."),
         )
-        d = result.to_dict()
-        assert d["record_id"] == "q001"
+        d = result.model_dump()
+        assert d["question_id"] == "q001"
         assert d["method"] == "llm"
         assert d["gen"]["query"] == "MATCH..."
 
     def test_from_dict(self):
         d = {
-            "record_id": "q001",
+            "question_id": "q001",
             "method": "llm",
             "lang": "cypher",
             "model": "gpt-4o",
@@ -177,6 +169,6 @@ class TestResult:
             "exec": None,
             "eval": None,
         }
-        result = Result.from_dict(d)
-        assert result.record_id == "q001"
+        result = Result.model_validate(d)
+        assert result.question_id == "q001"
         assert result.gen.query == "MATCH..."

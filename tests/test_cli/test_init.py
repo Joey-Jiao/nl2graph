@@ -113,6 +113,24 @@ class TestInit:
         assert result.exit_code == 0
         assert "Loaded 1 records" in result.stdout
 
+    def test_init_idempotent(self, mock_config, temp_data_dir):
+        tmp_path, _ = temp_data_dir
+
+        mock_ctx = Mock()
+        mock_ctx.resolve.return_value = mock_config
+
+        with patch("nl2graph.cli.init.get_context", return_value=mock_ctx):
+            result1 = runner.invoke(app, ["init", "test"])
+            assert result1.exit_code == 0
+
+            result2 = runner.invoke(app, ["init", "test"])
+            assert result2.exit_code == 0
+            assert "Removed existing" in result2.stdout
+
+        from nl2graph.data.repository import SourceRepository
+        with SourceRepository(str(tmp_path / "src.db")) as src:
+            assert src.count() == 2
+
 
 class TestExport:
 

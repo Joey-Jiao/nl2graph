@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Literal
 from pathlib import Path
 
 import typer
@@ -10,7 +10,7 @@ from ..base.models.service import ModelService
 from ..base.templates.service import TemplateService
 from ..data.repository import SourceRepository, ResultRepository
 from ..execution.schema.property_graph import PropertyGraphSchema
-from ..pipeline.inference import InferencePipeline
+from ..pipeline.inference import InferencePipeline, IfExists
 
 
 def generate(
@@ -22,6 +22,7 @@ def generate(
     hop: Optional[int] = typer.Option(None, "--hop", help="Filter by hop"),
     split: Optional[str] = typer.Option(None, "--split", help="Filter by split"),
     workers: int = typer.Option(1, "--workers", "-w", help="Number of parallel workers"),
+    if_exists: IfExists = typer.Option("skip", "--if-exists", help="Action when record exists: skip or override"),
 ):
     """Generate queries from questions."""
     ctx = get_context()
@@ -48,10 +49,12 @@ def generate(
     template_service = None
     template_name = None
     if method == "llm":
-        template_path = config.get(f"templates.prompts.{lang}")
-        if template_path:
-            template_service = ctx.resolve(TemplateService)
-            template_name = lang
+        template_service = ctx.resolve(TemplateService)
+        available = template_service.ls_templates("prompts")
+        if lang not in available:
+            typer.echo(f"Error: No template for '{lang}'. Available: {available}", err=True)
+            raise typer.Exit(1)
+        template_name = lang
 
     translator = None
     if ir:
@@ -63,6 +66,9 @@ def generate(
             raise typer.Exit(1)
 
     schema = _load_schema(config, dataset)
+    if method == "llm" and schema is None:
+        typer.echo(f"Error: No schema configured for '{dataset}'", err=True)
+        raise typer.Exit(1)
 
     with SourceRepository(src_path) as src, ResultRepository(dst_path) as dst:
         records = _load_records(src, hop, split)
@@ -80,6 +86,7 @@ def generate(
             ir_mode=ir,
             extract_query=(method == "llm"),
             workers=workers,
+            if_exists=if_exists,
         )
 
         pipeline.generate(records, schema)

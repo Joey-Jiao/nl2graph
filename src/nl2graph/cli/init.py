@@ -36,13 +36,23 @@ def init(
         typer.echo(f"Error: No dst.db path configured for dataset '{dataset}'", err=True)
         raise typer.Exit(1)
 
+    src_path = Path(src_path)
+    dst_path = Path(dst_path)
+
+    if src_path.exists():
+        src_path.unlink()
+        typer.echo(f"Removed existing {src_path}")
+    if dst_path.exists():
+        dst_path.unlink()
+        typer.echo(f"Removed existing {dst_path}")
+
     typer.echo(f"Initializing src.db from {data_path}...")
-    with SourceRepository(src_path) as src:
+    with SourceRepository(str(src_path)) as src:
         count = src.init_from_json(str(data_path))
     typer.echo(f"  -> Loaded {count} records into {src_path}")
 
     typer.echo(f"Initializing dst.db...")
-    with ResultRepository(dst_path) as dst:
+    with ResultRepository(str(dst_path)) as dst:
         pass
     typer.echo(f"  -> Created {dst_path}")
 

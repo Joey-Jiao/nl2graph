@@ -1,41 +1,91 @@
+import json
+import sqlite3
 from typing import Optional, Iterator, List, Any
+from pathlib import Path
 
-from ..base.storage import StorageService
 from .entity import Record, Result, GenerationResult, ExecutionResult, EvaluationResult
 
 
 class SourceRepository:
-    def __init__(self, db_path: str, table: str = "records"):
-        self._storage = StorageService(db_path)
-        self._table = table
+    TABLE = "data"
+
+    def __init__(self, db_path: str):
+        self._db_path = Path(db_path)
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(self._db_path))
+        self._conn.row_factory = sqlite3.Row
+        self._ensure_table()
+
+    def _ensure_table(self) -> None:
+        self._conn.execute(f"""
+            CREATE TABLE IF NOT EXISTS {self.TABLE} (
+                id TEXT PRIMARY KEY,
+                question TEXT,
+                answer TEXT,
+                extra TEXT
+            )
+        """)
+        self._conn.commit()
 
     def init_from_json(self, json_path: str) -> int:
-        self._storage.init_from_json(self._table, json_path, key_field="id")
-        return self._storage.count(self._table)
+        with open(json_path, "r", encoding="utf-8") as f:
+            records = json.load(f)
 
-    def get(self, id: str) -> Optional[Record]:
-        data = self._storage.get(self._table, id)
-        if data is None:
-            return None
+        for record in records:
+            id_ = record.pop("id")
+            question = record.pop("question")
+            answer = record.pop("answer")
+            extra = record if record else None
+
+            self._conn.execute(
+                f"INSERT OR REPLACE INTO {self.TABLE} (id, question, answer, extra) VALUES (?, ?, ?, ?)",
+                (id_, question, json.dumps(answer, ensure_ascii=False), json.dumps(extra, ensure_ascii=False) if extra else None)
+            )
+        self._conn.commit()
+        return len(records)
+
+    def _row_to_record(self, row: sqlite3.Row) -> Record:
+        data = {
+            "id": row["id"],
+            "question": row["question"],
+            "answer": json.loads(row["answer"]),
+        }
+        if row["extra"]:
+            extra = json.loads(row["extra"])
+            data.update(extra)
         return Record.from_dict(data)
 
+    def get(self, id: str) -> Optional[Record]:
+        cursor = self._conn.execute(
+            f"SELECT * FROM {self.TABLE} WHERE id = ?", (id,)
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return None
+        return self._row_to_record(row)
+
     def exists(self, id: str) -> bool:
-        return self._storage.exists(self._table, id)
+        cursor = self._conn.execute(
+            f"SELECT 1 FROM {self.TABLE} WHERE id = ? LIMIT 1", (id,)
+        )
+        return cursor.fetchone() is not None
 
     def count(self) -> int:
-        return self._storage.count(self._table)
+        cursor = self._conn.execute(f"SELECT COUNT(*) FROM {self.TABLE}")
+        return cursor.fetchone()[0]
 
     def iter_all(self) -> Iterator[Record]:
-        for _, data in self._storage.iter_all(self._table):
-            yield Record.from_dict(data)
+        cursor = self._conn.execute(f"SELECT * FROM {self.TABLE}")
+        for row in cursor:
+            yield self._row_to_record(row)
 
     def iter_by_filter(self, **filters: Any) -> Iterator[Record]:
-        for _, data in self._storage.iter_all(self._table):
-            if all(data.get(k) == v for k, v in filters.items() if v is not None):
-                yield Record.from_dict(data)
+        for record in self.iter_all():
+            if all(record.get_field(k) == v for k, v in filters.items() if v is not None):
+                yield record
 
     def close(self) -> None:
-        self._storage.close()
+        self._conn.close()
 
     def __enter__(self):
         return self
@@ -45,112 +95,143 @@ class SourceRepository:
 
 
 class ResultRepository:
-    TABLE = "results"
-    KEY_FIELDS = ["record_id", "method", "lang", "model"]
+    TABLE = "data"
 
     def __init__(self, db_path: str):
-        self._storage = StorageService(db_path)
-        self._storage._ensure_table_composite(self.TABLE, self.KEY_FIELDS)
+        self._db_path = Path(db_path)
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(str(self._db_path))
+        self._conn.row_factory = sqlite3.Row
+        self._ensure_table()
 
-    def _make_keys(self, record_id: str, method: str, lang: str, model: str) -> dict:
-        return {
-            "record_id": record_id,
-            "method": method,
-            "lang": lang,
-            "model": model,
-        }
+    def _ensure_table(self) -> None:
+        self._conn.execute(f"""
+            CREATE TABLE IF NOT EXISTS {self.TABLE} (
+                question_id TEXT,
+                method TEXT,
+                lang TEXT,
+                model TEXT,
+                gen TEXT,
+                exec TEXT,
+                eval TEXT,
+                PRIMARY KEY (question_id, method, lang, model)
+            )
+        """)
+        self._conn.commit()
 
-    def get(self, record_id: str, method: str, lang: str, model: str) -> Optional[Result]:
-        keys = self._make_keys(record_id, method, lang, model)
-        data = self._storage.get_composite(self.TABLE, keys)
-        if data is None:
+    def _row_to_result(self, row: sqlite3.Row) -> Result:
+        gen = GenerationResult.model_validate(json.loads(row["gen"])) if row["gen"] else None
+        exec_ = ExecutionResult.model_validate(json.loads(row["exec"])) if row["exec"] else None
+        eval_ = EvaluationResult.model_validate(json.loads(row["eval"])) if row["eval"] else None
+
+        return Result(
+            question_id=row["question_id"],
+            method=row["method"],
+            lang=row["lang"],
+            model=row["model"],
+            gen=gen,
+            exec=exec_,
+            eval=eval_,
+        )
+
+    def get(self, question_id: str, method: str, lang: str, model: str) -> Optional[Result]:
+        cursor = self._conn.execute(
+            f"SELECT * FROM {self.TABLE} WHERE question_id = ? AND method = ? AND lang = ? AND model = ?",
+            (question_id, method, lang, model)
+        )
+        row = cursor.fetchone()
+        if row is None:
             return None
-        return Result.from_dict(data)
+        return self._row_to_result(row)
 
-    def exists(self, record_id: str, method: str, lang: str, model: str) -> bool:
-        keys = self._make_keys(record_id, method, lang, model)
-        return self._storage.exists_composite(self.TABLE, keys)
+    def exists(self, question_id: str, method: str, lang: str, model: str) -> bool:
+        cursor = self._conn.execute(
+            f"SELECT 1 FROM {self.TABLE} WHERE question_id = ? AND method = ? AND lang = ? AND model = ? LIMIT 1",
+            (question_id, method, lang, model)
+        )
+        return cursor.fetchone() is not None
 
     def save_generation(
         self,
-        record_id: str,
+        question_id: str,
         method: str,
         lang: str,
         model: str,
         gen: GenerationResult,
     ) -> None:
-        keys = self._make_keys(record_id, method, lang, model)
-        data = {
-            **keys,
-            "gen": gen.model_dump(),
-            "exec": None,
-            "eval": None,
-        }
-        self._storage.put_composite(self.TABLE, keys, data)
+        gen_json = json.dumps(gen.model_dump(), ensure_ascii=False)
+        self._conn.execute(f"""
+            INSERT INTO {self.TABLE} (question_id, method, lang, model, gen, exec, eval)
+            VALUES (?, ?, ?, ?, ?, NULL, NULL)
+            ON CONFLICT (question_id, method, lang, model)
+            DO UPDATE SET gen = excluded.gen, exec = NULL, eval = NULL
+        """, (question_id, method, lang, model, gen_json))
+        self._conn.commit()
 
     def save_execution(
         self,
-        record_id: str,
+        question_id: str,
         method: str,
         lang: str,
         model: str,
-        exec: ExecutionResult,
+        exec_: ExecutionResult,
     ) -> None:
-        keys = self._make_keys(record_id, method, lang, model)
-        self._storage.update_composite(self.TABLE, keys, {
-            "exec": exec.model_dump(),
-            "eval": None,
-        })
+        exec_json = json.dumps(exec_.model_dump(), ensure_ascii=False)
+        self._conn.execute(f"""
+            UPDATE {self.TABLE} SET exec = ?, eval = NULL
+            WHERE question_id = ? AND method = ? AND lang = ? AND model = ?
+        """, (exec_json, question_id, method, lang, model))
+        self._conn.commit()
 
     def save_evaluation(
         self,
-        record_id: str,
+        question_id: str,
         method: str,
         lang: str,
         model: str,
-        eval: EvaluationResult,
+        eval_: EvaluationResult,
     ) -> None:
-        keys = self._make_keys(record_id, method, lang, model)
-        self._storage.update_composite(self.TABLE, keys, {
-            "eval": eval.model_dump(),
-        })
+        eval_json = json.dumps(eval_.model_dump(), ensure_ascii=False)
+        self._conn.execute(f"""
+            UPDATE {self.TABLE} SET eval = ?
+            WHERE question_id = ? AND method = ? AND lang = ? AND model = ?
+        """, (eval_json, question_id, method, lang, model))
+        self._conn.commit()
 
     def count(self) -> int:
-        return self._storage.count_composite(self.TABLE)
+        cursor = self._conn.execute(f"SELECT COUNT(*) FROM {self.TABLE}")
+        return cursor.fetchone()[0]
 
     def iter_all(self) -> Iterator[Result]:
-        for data in self._storage.iter_all_composite(self.TABLE):
-            yield Result.from_dict(data)
+        cursor = self._conn.execute(f"SELECT * FROM {self.TABLE}")
+        for row in cursor:
+            yield self._row_to_result(row)
 
-    def iter_by_record(self, record_id: str) -> Iterator[Result]:
-        for data in self._storage.iter_by_field(self.TABLE, "record_id", record_id):
-            yield Result.from_dict(data)
+    def iter_by_question(self, question_id: str) -> Iterator[Result]:
+        cursor = self._conn.execute(
+            f"SELECT * FROM {self.TABLE} WHERE question_id = ?", (question_id,)
+        )
+        for row in cursor:
+            yield self._row_to_result(row)
 
     def iter_by_config(self, method: str, lang: str, model: str) -> Iterator[Result]:
-        for data in self._storage.iter_all_composite(self.TABLE):
-            if data["method"] == method and data["lang"] == lang and data["model"] == model:
-                yield Result.from_dict(data)
-
-    def iter_pending(
-        self,
-        src: SourceRepository,
-        method: str,
-        lang: str,
-        model: str,
-    ) -> Iterator[Record]:
-        for record in src.iter_all():
-            if not self.exists(record.id, method, lang, model):
-                yield record
-            else:
-                result = self.get(record.id, method, lang, model)
-                if result.eval is None:
-                    yield record
+        cursor = self._conn.execute(
+            f"SELECT * FROM {self.TABLE} WHERE method = ? AND lang = ? AND model = ?",
+            (method, lang, model)
+        )
+        for row in cursor:
+            yield self._row_to_result(row)
 
     def export_json(self, path: str) -> List[dict]:
-        return self._storage.export_json_composite(self.TABLE, path)
+        results = []
+        for result in self.iter_all():
+            results.append(result.model_dump())
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        return results
 
     def close(self) -> None:
-        self._storage.close()
+        self._conn.close()
 
     def __enter__(self):
         return self

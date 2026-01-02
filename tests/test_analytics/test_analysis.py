@@ -13,7 +13,7 @@ class TestAnalysis:
     def test_extract_missing_relations_single(self, analysis):
         results = [
             Result(
-                record_id="q001",
+                question_id="q001",
                 method="llm",
                 lang="cypher",
                 model="test",
@@ -31,7 +31,7 @@ class TestAnalysis:
     def test_extract_missing_relations_multiple(self, analysis):
         results = [
             Result(
-                record_id="q001",
+                question_id="q001",
                 method="llm",
                 lang="cypher",
                 model="test",
@@ -39,7 +39,7 @@ class TestAnalysis:
                 exec=ExecutionResult(success=False, error="Unknown relationship type 'ACTED_IN'"),
             ),
             Result(
-                record_id="q002",
+                question_id="q002",
                 method="llm",
                 lang="cypher",
                 model="test",
@@ -47,7 +47,7 @@ class TestAnalysis:
                 exec=ExecutionResult(success=False, error="Unknown relationship type 'DIRECTED_BY'"),
             ),
             Result(
-                record_id="q003",
+                question_id="q003",
                 method="llm",
                 lang="cypher",
                 model="test",
@@ -62,7 +62,7 @@ class TestAnalysis:
     def test_extract_missing_relations_skip_success(self, analysis):
         results = [
             Result(
-                record_id="q001",
+                question_id="q001",
                 method="llm",
                 lang="cypher",
                 model="test",
@@ -77,28 +77,28 @@ class TestAnalysis:
     def test_categorize_errors(self, analysis):
         results = [
             Result(
-                record_id="q001",
+                question_id="q001",
                 method="llm",
                 lang="cypher",
                 model="test",
                 exec=ExecutionResult(success=False, error="Connection refused"),
             ),
             Result(
-                record_id="q002",
+                question_id="q002",
                 method="llm",
                 lang="cypher",
                 model="test",
                 exec=ExecutionResult(success=False, error="Syntax error at position 10"),
             ),
             Result(
-                record_id="q003",
+                question_id="q003",
                 method="llm",
                 lang="cypher",
                 model="test",
                 exec=ExecutionResult(success=False, error="Query timeout after 30s"),
             ),
             Result(
-                record_id="q004",
+                question_id="q004",
                 method="llm",
                 lang="cypher",
                 model="test",

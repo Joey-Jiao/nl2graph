@@ -4,9 +4,7 @@ from pydantic import BaseModel, ConfigDict
 
 
 class GenerationResult(BaseModel):
-    query_raw: Optional[str] = None
     query: Optional[str] = None
-    ir: Optional[str] = None
 
 
 class ExecutionResult(BaseModel):
@@ -43,17 +41,10 @@ class Record(BaseModel):
 
 
 class Result(BaseModel):
-    record_id: str
+    question_id: str
     method: Literal["llm", "seq2seq"]
     lang: str
     model: str
     gen: Optional[GenerationResult] = None
     exec: Optional[ExecutionResult] = None
     eval: Optional[EvaluationResult] = None
-
-    def to_dict(self) -> dict:
-        return self.model_dump()
-
-    @classmethod
-    def from_dict(cls, data: dict) -> "Result":
-        return cls.model_validate(data)

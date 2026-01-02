@@ -19,7 +19,7 @@ class TestScoringEvaluate:
     def test_evaluate_exact_match(self, scoring):
         record = Record(id="q001", question="Q", answer=["Paris"])
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -36,7 +36,7 @@ class TestScoringEvaluate:
     def test_evaluate_partial_match(self, scoring):
         record = Record(id="q001", question="Q", answer=["Paris", "London", "Berlin"])
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -52,7 +52,7 @@ class TestScoringEvaluate:
     def test_evaluate_no_match(self, scoring):
         record = Record(id="q001", question="Q", answer=["Paris"])
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -67,7 +67,7 @@ class TestScoringEvaluate:
     def test_evaluate_failed_execution(self, scoring):
         record = Record(id="q001", question="Q", answer=["Paris"])
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -80,7 +80,7 @@ class TestScoringEvaluate:
     def test_evaluate_case_insensitive(self, scoring):
         record = Record(id="q001", question="Q", answer=["PARIS"])
         result = Result(
-            record_id="q001",
+            question_id="q001",
             method="llm",
             lang="cypher",
             model="gpt-4o",
@@ -103,7 +103,7 @@ class TestScoringEvaluateBatch:
         for i in range(5):
             record = Record(id=f"q{i:03d}", question=f"Q{i}", answer=[f"A{i}"])
             result = Result(
-                record_id=f"q{i:03d}",
+                question_id=f"q{i:03d}",
                 method="llm",
                 lang="cypher",
                 model="gpt-4o",
@@ -124,7 +124,7 @@ class TestScoringEvaluateBatch:
             record = Record(id=f"q{i:03d}", question=f"Q{i}", answer=["correct"])
             if i < 2:
                 result = Result(
-                    record_id=f"q{i:03d}",
+                    question_id=f"q{i:03d}",
                     method="llm",
                     lang="cypher",
                     model="gpt-4o",
@@ -132,7 +132,7 @@ class TestScoringEvaluateBatch:
                 )
             else:
                 result = Result(
-                    record_id=f"q{i:03d}",
+                    question_id=f"q{i:03d}",
                     method="llm",
                     lang="cypher",
                     model="gpt-4o",
@@ -151,7 +151,7 @@ class TestScoringEvaluateBatch:
             record = Record(id=f"q{i:03d}", question=f"Q{i}", answer=["A"])
             if i < 2:
                 result = Result(
-                    record_id=f"q{i:03d}",
+                    question_id=f"q{i:03d}",
                     method="llm",
                     lang="cypher",
                     model="gpt-4o",
@@ -159,7 +159,7 @@ class TestScoringEvaluateBatch:
                 )
             else:
                 result = Result(
-                    record_id=f"q{i:03d}",
+                    question_id=f"q{i:03d}",
                     method="llm",
                     lang="cypher",
                     model="gpt-4o",

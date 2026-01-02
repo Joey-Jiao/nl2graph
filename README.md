@@ -6,7 +6,7 @@ NL-to-Graph Query research framework for evaluating natural language to graph da
 
 ```
 nl2graph
-├── init <dataset>                    Initialize src.db and dst.db
+├── init <dataset>                    Initialize src.db and dst.db (idempotent, removes existing)
 │   └── [-j, --json <path>]           Override data.json path
 │
 ├── generate <dataset>                Generate queries from questions
@@ -16,7 +16,8 @@ nl2graph
 │   ├── [--ir]                        Enable IR mode (seq2seq)
 │   ├── [--hop <n>]                   Filter by hop
 │   ├── [--split <name>]              Filter by split
-│   └── [-w, --workers <n>]           Parallel workers (default: 1)
+│   ├── [-w, --workers <n>]           Parallel workers (default: 1)
+│   └── [--if-exists <skip|override>] Action when record exists (default: skip)
 │
 ├── execute <dataset>                 Execute queries against database
 │   ├── -m, --method <llm|seq2seq>    Generation method (required)
@@ -24,14 +25,16 @@ nl2graph
 │   ├── -l, --lang <lang>             Query language (required)
 │   ├── [--hop <n>]                   Filter by hop
 │   ├── [--split <name>]              Filter by split
-│   └── [-w, --workers <n>]           Parallel workers (default: 1)
+│   ├── [-w, --workers <n>]           Parallel workers (default: 1)
+│   └── [--if-exists <skip|override>] Action when record exists (default: skip)
 │
 ├── evaluate <dataset>                Evaluate execution results
 │   ├── -m, --method <llm|seq2seq>    Generation method (required)
 │   ├── --model <name>                Model name (required)
 │   ├── -l, --lang <lang>             Query language (required)
 │   ├── [--hop <n>]                   Filter by hop
-│   └── [--split <name>]              Filter by split
+│   ├── [--split <name>]              Filter by split
+│   └── [--if-exists <skip|override>] Action when record exists (default: skip)
 │
 ├── train <dataset>                   Train seq2seq model
 │   ├── [-s, --shot <1shot|3shot|5shot>]  Few-shot config
@@ -69,12 +72,12 @@ nl2graph report metaqa -m llm --model gpt-4o -l cypher
 src.db (read-only)                    dst.db (read-write)
 ┌─────────────────┐                   ┌─────────────────────────────────────┐
 │ Record          │                   │ Result                              │
-│  - id           │                   │  - record_id ─┐                     │
-│  - question     │──── generate ────►│  - method    ─┼─ composite key      │
-│  - answer       │                   │  - lang      ─┤                     │
-│  - hop          │                   │  - model     ─┘                     │
-│  - split        │                   │  - gen:  {query_raw, query, ir}     │
-└─────────────────┘                   │  - exec: {success, result, error}   │
+│  - id           │                   │  - question_id ─┐                   │
+│  - question     │──── generate ────►│  - method      ─┼─ composite key    │
+│  - answer       │                   │  - lang        ─┤                   │
+│  - extra        │                   │  - model       ─┘                   │
+└─────────────────┘                   │  - gen:  {query}                    │
+        │                             │  - exec: {result, success, error}   │
         │                             │  - eval: {exact_match, f1, ...}     │
         │                             └─────────────────────────────────────┘
         │                                       │
@@ -86,28 +89,26 @@ src.db (read-only)                    dst.db (read-write)
 
 **src.db** (read-only) - Source records from dataset
 
-| Table: `records` | Type | Description |
-|------------------|------|-------------|
+| Table: `data` | Type | Description |
+|---------------|------|-------------|
 | `id` | TEXT | Primary key |
 | `question` | TEXT | Natural language question |
-| `answer` | JSON | Ground truth answer(s) |
-| `hop` | INTEGER | (optional) Query complexity |
-| `split` | TEXT | (optional) train/dev/test |
-| `...` | | Additional fields allowed |
+| `answer` | TEXT | JSON array of ground truth answers |
+| `extra` | TEXT | JSON object with optional fields (hop, split, ...) |
 
 **dst.db** (read-write) - Experiment results
 
-| Table: `results` | Type | Description |
-|------------------|------|-------------|
-| `record_id` | TEXT | ┐ |
+| Table: `data` | Type | Description |
+|---------------|------|-------------|
+| `question_id` | TEXT | ┐ |
 | `method` | TEXT | │ Composite |
 | `lang` | TEXT | │ Primary Key |
 | `model` | TEXT | ┘ |
-| `gen` | JSON | GenerationResult |
-| `exec` | JSON | ExecutionResult |
-| `eval` | JSON | EvaluationResult |
+| `gen` | TEXT | JSON: {query} |
+| `exec` | TEXT | JSON: {result, success, error} |
+| `eval` | TEXT | JSON: {exact_match, f1, precision, recall} |
 
-The composite key `(record_id, method, lang, model)` allows multiple experiment results for the same record.
+The composite key `(question_id, method, lang, model)` allows multiple experiment results for the same question.
 
 ## Progress
 

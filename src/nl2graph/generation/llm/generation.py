@@ -1,17 +1,10 @@
-from typing import List
-
 from ...base.llm.service import LLMService
 from ...base.llm.entity import LLMMessage
 
 
 class Generation:
 
-    def __init__(
-        self,
-        llm_service: LLMService,
-        provider: str,
-        model: str,
-    ):
+    def __init__(self, llm_service: LLMService, provider: str, model: str):
         self.provider = provider
         self.model = model
         self.client = llm_service.get_client(provider, model)
@@ -20,6 +13,3 @@ class Generation:
         messages = [LLMMessage.user(prompt)]
         response = self.client.chat(messages)
         return response.content
-
-    def generate_batch(self, prompts: List[str]) -> List[str]:
-        return [self.generate(prompt) for prompt in prompts]

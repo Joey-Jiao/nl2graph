@@ -108,7 +108,15 @@ class TestGenerate:
         mock_config.get.side_effect = lambda key, default=None: {
             "data.test.src": str(tmp_path / "src.db"),
             "data.test.dst": str(tmp_path / "dst.db"),
+            "data.test.schema": str(tmp_path / "schema.json"),
         }.get(key, default)
+
+        schema_file = tmp_path / "schema.json"
+        schema_file.write_text(json.dumps({
+            "name": "test",
+            "entities": [{"label": "Node", "properties": {"name": "str"}}],
+            "relations": [],
+        }))
 
         mock_llm_service = Mock()
         mock_client = Mock()
@@ -117,10 +125,15 @@ class TestGenerate:
         mock_client.chat.return_value = mock_response
         mock_llm_service.get_client.return_value = mock_client
 
+        mock_template_service = Mock()
+        mock_template_service.ls_templates.return_value = ["cypher", "sparql"]
+        mock_template_service.render.return_value = "prompt with schema"
+
         mock_ctx = Mock()
         mock_ctx.resolve.side_effect = lambda cls: {
             "ConfigService": mock_config,
             "LLMService": mock_llm_service,
+            "TemplateService": mock_template_service,
         }.get(cls.__name__, mock_config)
 
         with patch("nl2graph.cli.generate.get_context", return_value=mock_ctx):
@@ -132,8 +145,8 @@ class TestGenerate:
             ])
 
         assert result.exit_code == 0
-        assert "Generating for 1 records" in result.stdout
-        assert "Done" in result.stdout
+        assert "Generating for 1 records" in result.output
+        assert "Done" in result.output
 
     def test_generate_seq2seq_checkpoint_not_found(self, temp_db_setup):
         tmp_path = temp_db_setup
