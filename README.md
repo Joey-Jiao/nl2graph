@@ -120,19 +120,37 @@ The composite key `(question_id, method, lang, model)` allows multiple experimen
 
 ### LLM
 
-| Dataset | Model | Gen | Exec | Eval | Acc | F1 |
-|---------|-------|:---:|:----:|:----:|----:|---:|
-| metaqa | deepseek-chat | [x] | [x] | [x] | 78.8% | 80.9% |
-| metaqa | deepseek-reasoner | [x] | [ ] | [ ] | - | - |
-| openreview | deepseek-chat | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-reasoner | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-chat | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-reasoner | [ ] | [ ] | [ ] | - | - |
+| Dataset | Model | Lang | Data Prep |  Server Prep   | Gen | Exec | Eval | Acc | F1 |
+|---------|-------|------|:---------:|:--------------:|:---:|:----:|:----:|----:|---:|
+| metaqa | deepseek-chat | cypher | [x] |      [x]       | [x] | [x] | [x] | 78.8% | 80.9% |
+| metaqa | deepseek-chat | sparql | [x] |      [x]       | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-chat | gremlin | [x] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-reasoner | cypher | [x] |      [x]       | [x] | [x] | [x] | 82.2% | 86.6% |
+| metaqa | deepseek-reasoner | sparql | [x] |      [x]       | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-reasoner | gremlin | [x] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | cypher | [ ] |      [x]       | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | sparql | [ ] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | gremlin | [ ] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | cypher | [ ] |      [x]       | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | sparql | [ ] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | gremlin | [ ] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-chat | cypher | [ ] | [Infeasible] | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-chat | sparql | [ ] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-chat | gremlin | [ ] | [Infeasible] | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-reasoner | cypher | [ ] | [Infeasible] | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-reasoner | sparql | [ ] |      [ ]       | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-reasoner | gremlin | [ ] | [Infeasible] | [ ] | [ ] | [ ] | - | - |
 
 ### Seq2Seq
 
-| Dataset | Pretrain | Posttrain | Gen | Exec | Eval | Acc | F1 |
-|---------|:--------:|:---------:|:---:|:----:|:----:|----:|---:|
-| metaqa | [x] | [x] | [ ] | [ ] | [ ] | - | - |
-| openreview | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
-| webqsp | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| Dataset | Lang |      Data Prep      |  Server Prep  | Pretrain | Posttrain | Gen | Exec | Eval | Acc | F1 |
+|---------|------|:-------------------:|:-------------:|:--------:|:---------:|:---:|:----:|:----:|----:|---:|
+| metaqa | cypher |         [x]         |      [x]      | [x] | [x] | [ ] | [ ] | [ ] | - | - |
+| metaqa | sparql |         [x]         |      [x]      | [x] | [x] | [ ] | [ ] | [ ] | - | - |
+| metaqa | gremlin |         [Challenging]          |      [ ]      | [x] | [x] | [ ] | [ ] | [ ] | - | - |
+| openreview | cypher |         [ ]         |      [x]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| openreview | sparql |         [ ]         |      [ ]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| openreview | gremlin |         [ ]         |      [ ]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| webqsp | cypher |    [Challenging]    | [Infeasible] | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| webqsp | sparql |         [ ]         |      [ ]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
+| webqsp | gremlin |    [Challenging]    | [Infeasible]  | [x] | [ ] | [ ] | [ ] | [ ] | - | - |

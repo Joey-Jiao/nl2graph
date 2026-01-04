@@ -93,6 +93,7 @@ class SourceRepository:
 
     def close(self) -> None:
         if hasattr(self._local, 'conn'):
+            self._local.conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
             self._local.conn.close()
             del self._local.conn
 
@@ -260,6 +261,7 @@ class ResultRepository:
 
     def close(self) -> None:
         if hasattr(self._local, 'conn'):
+            self._local.conn.execute("PRAGMA wal_checkpoint(PASSIVE)")
             self._local.conn.close()
             del self._local.conn
 

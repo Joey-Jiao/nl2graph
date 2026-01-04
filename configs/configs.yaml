@@ -18,6 +18,8 @@ llm:
     deepseek-reasoner:
       timeout: 30
       endpoint: https://api.deepseek.com
+  together:
+
 
 templates:
   prompts: "templates/prompts"
