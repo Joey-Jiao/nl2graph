@@ -7,7 +7,7 @@ from tqdm import tqdm
 from ..data import Record, GenerationResult, ExecutionResult, ResultRepository
 from ..execution import Execution
 from ..evaluation import Scoring
-from ..base.templates.service import TemplateService
+from ..base import TemplateService
 from ..execution.schema.base import BaseSchema
 
 

@@ -4,7 +4,7 @@ from typing import List, Optional
 import torch
 from transformers import AutoTokenizer, BartForConditionalGeneration
 
-from ...base.configs import ConfigService
+from ...base import ConfigService
 
 
 class Generation:

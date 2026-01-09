@@ -3,10 +3,8 @@ from pathlib import Path
 
 import typer
 
-from ..base.context import get_context
-from ..base.configs import ConfigService
-from ..execution.service import GraphService
-from ..execution import Execution
+from ..base import get_context, ConfigService
+from ..execution import GraphService, Execution
 from ..data.repository import SourceRepository, ResultRepository
 from ..pipeline.inference import InferencePipeline, IfExists
 

@@ -90,7 +90,11 @@ data:
       group_by:
         - hop
         - split
-    schema: "data/metaqa/schema.json"
+    schema:
+      default: "data/metaqa/schema_cypher.json"
+      cypher: "data/metaqa/schema_cypher.json"
+      sparql: "data/metaqa/schema_sparql.json"
+      gremlin: "data/metaqa/schema_gremlin.json"
     connection:
       cypher:
         host: localhost
@@ -111,7 +115,8 @@ data:
     eval:
       raw: "data/openreview/eval/raw"
       processed: "data/openreview/eval/processed"
-    schema: "data/openreview/schema.json"
+    schema:
+      default: "data/openreview/schema.json"
     connection:
       cypher:
         host: localhost

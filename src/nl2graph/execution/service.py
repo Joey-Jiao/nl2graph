@@ -1,6 +1,6 @@
 from typing import Dict
 
-from ..base.configs import ConfigService
+from ..base import ConfigService
 from .connectors.base import BaseConnector
 from .connectors.neo4j import Neo4jConnector
 from .connectors.rdflib import RDFLibConnector

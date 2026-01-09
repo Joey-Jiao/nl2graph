@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ..base.configs import ConfigService
+from ..base import ConfigService
 from ..generation.seq2seq.train import ConfigLoader, Preprocessing, Training
 
 

@@ -3,9 +3,7 @@ from pathlib import Path
 
 import typer
 
-from ..base.context import get_context
-from ..base.configs import ConfigService
-from ..base.models.service import ModelService
+from ..base import get_context, ConfigService, ModelService
 from ..pipeline.train import TrainPipeline
 
 

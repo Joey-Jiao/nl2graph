@@ -1,5 +1,4 @@
-from ...base.llm.service import LLMService
-from ...base.llm.entity import LLMMessage
+from ...base import LLMService, LLMMessage
 
 
 class Generation:

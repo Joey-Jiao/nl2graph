@@ -3,13 +3,9 @@ from pathlib import Path
 
 import typer
 
-from ..base.context import get_context
-from ..base.configs import ConfigService
-from ..base.llm.service import LLMService
-from ..base.models.service import ModelService
-from ..base.templates.service import TemplateService
+from ..base import get_context, ConfigService, LLMService, ModelService, TemplateService
 from ..data.repository import SourceRepository, ResultRepository
-from ..execution.schema.property_graph import PropertyGraphSchema
+from ..execution.schema.base import BaseSchema
 from ..pipeline.inference import InferencePipeline, IfExists
 
 
@@ -48,6 +44,7 @@ def generate(
 
     template_service = None
     template_name = None
+    schema = None
     if method == "llm":
         template_service = ctx.resolve(TemplateService)
         available = template_service.ls_templates("prompts")
@@ -55,6 +52,11 @@ def generate(
             typer.echo(f"Error: No template for '{lang}'. Available: {available}", err=True)
             raise typer.Exit(1)
         template_name = lang
+
+        schema = _load_schema(config, dataset, lang)
+        if schema is None:
+            typer.echo(f"Error: No schema configured for '{dataset}/{lang}'", err=True)
+            raise typer.Exit(1)
 
     translator = None
     if ir:
@@ -64,11 +66,6 @@ def generate(
         except ImportError:
             typer.echo("Error: graphq-trans not installed for IR mode", err=True)
             raise typer.Exit(1)
-
-    schema = _load_schema(config, dataset)
-    if method == "llm" and schema is None:
-        typer.echo(f"Error: No schema configured for '{dataset}'", err=True)
-        raise typer.Exit(1)
 
     with SourceRepository(src_path) as src, ResultRepository(dst_path) as dst:
         records = _load_records(src, hop, split)
@@ -128,8 +125,8 @@ def _detect_provider(model: str) -> Optional[str]:
     return None
 
 
-def _load_schema(config: ConfigService, dataset: str) -> Optional[PropertyGraphSchema]:
-    schema_path = config.get(f"data.{dataset}.schema")
+def _load_schema(config: ConfigService, dataset: str, lang: str) -> Optional[BaseSchema]:
+    schema_path = config.get(f"data.{dataset}.schema.{lang}")
     if not schema_path:
         return None
 
@@ -140,7 +137,13 @@ def _load_schema(config: ConfigService, dataset: str) -> Optional[PropertyGraphS
     import json
     with open(schema_path) as f:
         data = json.load(f)
-    return PropertyGraphSchema.from_dict(data)
+
+    if lang == "sparql":
+        from ..execution.schema.rdf import RDFSchema
+        return RDFSchema.from_dict(data)
+    else:
+        from ..execution.schema.property_graph import PropertyGraphSchema
+        return PropertyGraphSchema.from_dict(data)
 
 
 def _load_records(src: SourceRepository, hop: Optional[int], split: Optional[str]):

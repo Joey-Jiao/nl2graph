@@ -7,7 +7,6 @@ from .models.service import ModelService
 from .llm.service import LLMService
 from .templates.service import TemplateService
 from ..execution.service import GraphService
-from ..evaluation import Scoring
 
 
 class ApplicationContext:
@@ -42,8 +41,5 @@ def get_context(
 
     graph_service = GraphService(config=config_service)
     container.register(GraphService, instance=graph_service)
-
-    scoring = Scoring()
-    container.register(Scoring, instance=scoring)
 
     return ApplicationContext(container)

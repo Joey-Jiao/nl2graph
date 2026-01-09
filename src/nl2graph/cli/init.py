@@ -3,8 +3,7 @@ from pathlib import Path
 
 import typer
 
-from ..base.context import get_context
-from ..base.configs import ConfigService
+from ..base import get_context, ConfigService
 from ..data.repository import SourceRepository, ResultRepository
 
 

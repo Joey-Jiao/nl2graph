@@ -2,11 +2,7 @@ from typing import Optional
 
 import typer
 
-from ..base.context import get_context
-from ..base.configs import ConfigService
-from ..base.llm.service import LLMService
-from ..base.models.service import ModelService
-from ..base.templates.service import TemplateService
+from ..base import get_context, ConfigService, LLMService, ModelService, TemplateService
 
 
 def ls(
