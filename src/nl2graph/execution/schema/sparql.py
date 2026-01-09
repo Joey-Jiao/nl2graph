@@ -19,7 +19,7 @@ class PropertyDef(BaseModel):
     is_object_property: bool = False
 
 
-class RDFSchema(BaseSchema, BaseModel):
+class SparqlSchema(BaseSchema, BaseModel):
     name: str
     prefixes: Dict[str, str] = {}
     classes: List[ClassSchema] = []
@@ -55,7 +55,7 @@ class RDFSchema(BaseSchema, BaseModel):
         return "\n".join(lines)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "RDFSchema":
+    def from_dict(cls, data: dict) -> "SparqlSchema":
         classes = [ClassSchema(**c) for c in data.get("classes", [])]
         properties = [PropertyDef(**p) for p in data.get("properties", [])]
         return cls(

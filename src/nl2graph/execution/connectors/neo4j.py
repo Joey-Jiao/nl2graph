@@ -2,7 +2,7 @@ import re
 from typing import Optional, List, Dict
 
 from ..entity import QueryLanguage
-from ..schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
+from ..schema.cypher import CypherSchema, NodeSchema, EdgeSchema, PropertySchema
 from ..result.entity import QueryResult
 from ..result.converter import convert_neo4j_value
 from .base import BaseConnector
@@ -103,12 +103,12 @@ class Neo4jConnector(BaseConnector):
         pattern = r':\s*([A-Z_]+)(?=\s*[\]\{])'
         return re.sub(pattern, lambda m: ':' + m.group(1).lower(), query)
 
-    def get_schema(self, mode: str = "direct") -> PropertyGraphSchema:
+    def get_schema(self, mode: str = "direct") -> CypherSchema:
         if mode == "apoc":
             return self._get_schema_apoc()
         return self._get_schema_direct()
 
-    def _get_schema_apoc(self) -> PropertyGraphSchema:
+    def _get_schema_apoc(self) -> CypherSchema:
         node_result = self.execute(NODE_PROPERTIES_QUERY)
         rel_result = self.execute(REL_QUERY)
 
@@ -132,9 +132,9 @@ class Neo4jConnector(BaseConnector):
                 target_label=row["target_label"],
             ))
 
-        return PropertyGraphSchema(name=self.name, nodes=nodes, edges=edges)
+        return CypherSchema(name=self.name, nodes=nodes, edges=edges)
 
-    def _get_schema_direct(self) -> PropertyGraphSchema:
+    def _get_schema_direct(self) -> CypherSchema:
         node_result = self.execute(DIRECT_NODE_PROPERTIES_QUERY)
         rel_result = self.execute(DIRECT_REL_QUERY)
 
@@ -162,4 +162,4 @@ class Neo4jConnector(BaseConnector):
                     target_label=row["target_label"],
                 ))
 
-        return PropertyGraphSchema(name=self.name, nodes=nodes, edges=edges)
+        return CypherSchema(name=self.name, nodes=nodes, edges=edges)

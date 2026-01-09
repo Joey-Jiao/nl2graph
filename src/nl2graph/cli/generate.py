@@ -139,11 +139,14 @@ def _load_schema(config: ConfigService, dataset: str, lang: str) -> Optional[Bas
         data = json.load(f)
 
     if lang == "sparql":
-        from ..execution.schema.rdf import RDFSchema
-        return RDFSchema.from_dict(data)
+        from ..execution.schema.sparql import SparqlSchema
+        return SparqlSchema.from_dict(data)
+    elif lang == "gremlin":
+        from ..execution.schema.gremlin import GremlinSchema
+        return GremlinSchema.from_dict(data)
     else:
-        from ..execution.schema.property_graph import PropertyGraphSchema
-        return PropertyGraphSchema.from_dict(data)
+        from ..execution.schema.cypher import CypherSchema
+        return CypherSchema.from_dict(data)
 
 
 def _load_records(src: SourceRepository, hop: Optional[int], split: Optional[str]):

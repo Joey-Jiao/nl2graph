@@ -1,5 +1,4 @@
-from typing import List, Dict, Any, Optional
-import json
+from typing import List
 
 from pydantic import BaseModel
 
@@ -23,7 +22,7 @@ class EdgeSchema(BaseModel):
     properties: List[PropertySchema] = []
 
 
-class PropertyGraphSchema(BaseSchema, BaseModel):
+class CypherSchema(BaseSchema, BaseModel):
     name: str
     nodes: List[NodeSchema] = []
     edges: List[EdgeSchema] = []
@@ -49,7 +48,7 @@ class PropertyGraphSchema(BaseSchema, BaseModel):
         return "\n".join(lines)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "PropertyGraphSchema":
+    def from_dict(cls, data: dict) -> "CypherSchema":
         nodes = []
         for n in data.get("nodes", []) or data.get("entities", []):
             props = []

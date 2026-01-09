@@ -1,7 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 
 from ..entity import QueryLanguage
-from ..schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
+from ..schema.gremlin import GremlinSchema, NodeSchema, EdgeSchema, PropertySchema
 from ..result.entity import QueryResult
 from ..result.converter import convert_gremlin_value
 from .base import BaseConnector
@@ -74,7 +74,7 @@ class GremlinConnector(BaseConnector):
         columns = list(rows[0].keys()) if rows else []
         return QueryResult(columns=columns, rows=rows, raw=raw_results)
 
-    def get_schema(self) -> PropertyGraphSchema:
+    def get_schema(self) -> GremlinSchema:
         from gremlin_python.process.graph_traversal import __
 
         vertex_labels = self._g.V().label().dedup().toList()
@@ -109,4 +109,4 @@ class GremlinConnector(BaseConnector):
                         target_label=info["tgt"],
                     ))
 
-        return PropertyGraphSchema(name=self.name, nodes=nodes, edges=edges)
+        return GremlinSchema(name=self.name, nodes=nodes, edges=edges)

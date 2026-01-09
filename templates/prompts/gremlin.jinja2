@@ -1,0 +1,13 @@
+Translate the question to Gremlin traversal based on the schema of a property graph.
+- Output the Gremlin traversal in a single line, without any additional output or explanation. Do not wrap the query with any formatting like ```.
+- Start the traversal from `g.V()` or `g.E()` as appropriate.
+- Avoid listing the same entity multiple times in the results. However, if multiple distinct entities share the same name, their names should be repeated as separate entries.
+- Do not return vertex or edge objects. Instead, return entity names or properties using `.values()` or `.valueMap()`.
+
+Graph Schema:
+{{ schema }}
+
+Question:
+{{ question }}
+
+Gremlin:

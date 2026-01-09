@@ -2,7 +2,7 @@ from typing import Optional, List, TYPE_CHECKING
 from pathlib import Path
 
 from ..entity import QueryLanguage
-from ..schema.rdf import RDFSchema, ClassSchema, PropertyDef
+from ..schema.sparql import SparqlSchema, ClassSchema, PropertyDef
 from ..result.entity import QueryResult
 from ..result.converter import convert_rdf_value
 from .base import BaseConnector
@@ -72,7 +72,7 @@ class RDFLibConnector(BaseConnector):
 
         return QueryResult(columns=[], rows=[], raw=result)
 
-    def get_schema(self) -> RDFSchema:
+    def get_schema(self) -> SparqlSchema:
         from rdflib import RDF, RDFS, OWL
 
         prefixes = {}
@@ -139,7 +139,7 @@ class RDFLibConnector(BaseConnector):
                     is_object_property=False,
                 ))
 
-        return RDFSchema(
+        return SparqlSchema(
             name=self.name,
             prefixes=prefixes,
             classes=classes,
