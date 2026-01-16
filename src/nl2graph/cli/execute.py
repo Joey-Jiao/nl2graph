@@ -6,7 +6,8 @@ import typer
 from ..base import get_context, ConfigService
 from ..execution import GraphService, Execution
 from ..data.repository import SourceRepository, ResultRepository
-from ..pipeline.inference import InferencePipeline, IfExists
+from ..pipeline.execute import ExecutePipeline, IfExists
+from ._helpers import load_records
 
 
 def execute(
@@ -43,13 +44,12 @@ def execute(
         raise typer.Exit(1)
 
     with SourceRepository(src_path) as src, ResultRepository(dst_path) as dst:
-        records = _load_records(src, hop, split)
+        records = load_records(src, hop, split)
         typer.echo(f"Executing for {len(records)} records...")
 
-        pipeline = InferencePipeline(
-            generator=_DummyGenerator(),
-            dst=dst,
+        pipeline = ExecutePipeline(
             execution=execution,
+            dst=dst,
             method=method,
             lang=lang,
             model=model,
@@ -57,23 +57,6 @@ def execute(
             if_exists=if_exists,
         )
 
-        pipeline.execute(records)
+        pipeline.run(records)
 
     typer.echo("Done.")
-
-
-class _DummyGenerator:
-    def generate(self, text: str) -> str:
-        return ""
-
-
-def _load_records(src: SourceRepository, hop: Optional[int], split: Optional[str]):
-    filters = {}
-    if hop is not None:
-        filters["hop"] = hop
-    if split is not None:
-        filters["split"] = split
-
-    if filters:
-        return list(src.iter_by_filter(**filters))
-    return list(src.iter_all())

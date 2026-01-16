@@ -1,8 +1,12 @@
-from .inference import InferencePipeline, Generator
+from .generate import GeneratePipeline, Generator
+from .execute import ExecutePipeline
+from .evaluate import EvaluatePipeline
 from .train import TrainPipeline
 
 __all__ = [
-    "InferencePipeline",
+    "GeneratePipeline",
+    "ExecutePipeline",
+    "EvaluatePipeline",
     "Generator",
     "TrainPipeline",
 ]

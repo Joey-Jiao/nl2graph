@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock
 
-from nl2graph.pipeline import InferencePipeline
+from nl2graph.pipeline import GeneratePipeline, ExecutePipeline, EvaluatePipeline
 from nl2graph.generation.llm.generation import Generation
 from nl2graph.execution import Execution
 from nl2graph.base.llm.service import LLMService
@@ -12,7 +12,7 @@ from nl2graph.base.configs import ConfigService
 from nl2graph.data import Record, Result, GenerationResult, ExecutionResult
 from nl2graph.evaluation import Scoring
 from nl2graph.data.repository import ResultRepository
-from nl2graph.execution.schema.property_graph import PropertyGraphSchema, NodeSchema, EdgeSchema, PropertySchema
+from nl2graph.execution.schema.cypher import CypherSchema, NodeSchema, EdgeSchema, PropertySchema
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ Generate only the Cypher query in a ```cypher``` code block.""")
 
 @pytest.fixture
 def movie_schema():
-    return PropertyGraphSchema(
+    return CypherSchema(
         name="MovieDB",
         nodes=[
             NodeSchema(label="Person", properties=[PropertySchema(name="name", data_type="string")]),
@@ -84,6 +84,9 @@ class TestLLMPipelineReal:
             llm_service=llm_service,
             provider="openai",
             model="gpt-4o-mini",
+            template_service=template_service,
+            template_name="cypher",
+            extract_query=True,
         )
 
         mock_connector = Mock()
@@ -94,38 +97,48 @@ class TestLLMPipelineReal:
         execution = Execution(mock_connector)
         scoring = Scoring()
 
-        pipeline = InferencePipeline(
-            generator=generation,
-            dst=dst,
-            template_service=template_service,
-            template_name="cypher",
-            extract_query=True,
-            execution=execution,
-            scoring=scoring,
-            method="llm",
-            lang="cypher",
-            model="gpt-4o-mini",
-            workers=1,
-        )
-
         records = [
             Record(id="q001", question="Who directed Inception?", answer=["Christopher Nolan"]),
         ]
 
         print("\n=== OpenAI Full Pipeline Test ===")
 
-        records = pipeline.generate(records, movie_schema)
+        gen_pipeline = GeneratePipeline(
+            generator=generation,
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="gpt-4o-mini",
+        )
+        gen_pipeline.run(records, movie_schema)
+
         res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
         print(f"[Generated Query]: {res.gen.query}")
         assert res.gen.query is not None
 
-        records = pipeline.execute(records)
+        exec_pipeline = ExecutePipeline(
+            execution=execution,
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="gpt-4o-mini",
+        )
+        exec_pipeline.run(records)
+
         res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
         print(f"[Execution Success]: {res.exec.success}")
         print(f"[Execution Result]: {res.exec.result}")
         assert res.exec.success is True
 
-        records = pipeline.evaluate(records)
+        eval_pipeline = EvaluatePipeline(
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="gpt-4o-mini",
+            scoring=scoring,
+        )
+        eval_pipeline.run(records)
+
         res = dst.get("q001", "llm", "cypher", "gpt-4o-mini")
         print(f"[Exact Match]: {res.eval.exact_match}")
         print(f"[F1]: {res.eval.f1}")
@@ -140,6 +153,9 @@ class TestLLMPipelineReal:
             llm_service=llm_service,
             provider="deepseek",
             model="deepseek-chat",
+            template_service=template_service,
+            template_name="cypher",
+            extract_query=True,
         )
 
         mock_connector = Mock()
@@ -150,37 +166,47 @@ class TestLLMPipelineReal:
         execution = Execution(mock_connector)
         scoring = Scoring()
 
-        pipeline = InferencePipeline(
-            generator=generation,
-            dst=dst,
-            template_service=template_service,
-            template_name="cypher",
-            extract_query=True,
-            execution=execution,
-            scoring=scoring,
-            method="llm",
-            lang="cypher",
-            model="deepseek-chat",
-            workers=1,
-        )
-
         records = [
             Record(id="q001", question="Find all actors in the database", answer=["Tom Hanks", "Leonardo DiCaprio"]),
         ]
 
         print("\n=== DeepSeek Full Pipeline Test ===")
 
-        records = pipeline.generate(records, movie_schema)
+        gen_pipeline = GeneratePipeline(
+            generator=generation,
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="deepseek-chat",
+        )
+        gen_pipeline.run(records, movie_schema)
+
         res = dst.get("q001", "llm", "cypher", "deepseek-chat")
         print(f"[Generated Query]: {res.gen.query}")
         assert res.gen.query is not None
 
-        records = pipeline.execute(records)
+        exec_pipeline = ExecutePipeline(
+            execution=execution,
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="deepseek-chat",
+        )
+        exec_pipeline.run(records)
+
         res = dst.get("q001", "llm", "cypher", "deepseek-chat")
         print(f"[Execution Success]: {res.exec.success}")
         print(f"[Execution Result]: {res.exec.result}")
 
-        records = pipeline.evaluate(records)
+        eval_pipeline = EvaluatePipeline(
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="deepseek-chat",
+            scoring=scoring,
+        )
+        eval_pipeline.run(records)
+
         res = dst.get("q001", "llm", "cypher", "deepseek-chat")
         print(f"[Exact Match]: {res.eval.exact_match}")
         print(f"[F1]: {res.eval.f1}")
@@ -262,7 +288,7 @@ class TestExecution:
         assert result == []
 
 
-class TestInferencePipelineUnit:
+class TestPipelineUnit:
 
     @pytest.fixture
     def dst(self):
@@ -272,11 +298,31 @@ class TestInferencePipelineUnit:
             yield repo
             repo.close()
 
-    def test_init(self, dst):
-        pipeline = InferencePipeline(
+    def test_generate_pipeline_init(self, dst):
+        pipeline = GeneratePipeline(
             generator=Mock(),
             dst=dst,
+            method="llm",
+            lang="cypher",
+            model="gpt-4o",
+        )
+        assert pipeline.lang == "cypher"
+        assert pipeline.model == "gpt-4o"
+
+    def test_execute_pipeline_init(self, dst):
+        pipeline = ExecutePipeline(
             execution=Mock(),
+            dst=dst,
+            method="llm",
+            lang="cypher",
+            model="gpt-4o",
+        )
+        assert pipeline.lang == "cypher"
+        assert pipeline.model == "gpt-4o"
+
+    def test_evaluate_pipeline_init(self, dst):
+        pipeline = EvaluatePipeline(
+            dst=dst,
             method="llm",
             lang="cypher",
             model="gpt-4o",

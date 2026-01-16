@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch, MagicMock
 from typer.testing import CliRunner
 
 from nl2graph.cli import app
+from nl2graph.base.llm.entity import LLMMessage, LLMUsage, LLMResponse
 
 
 runner = CliRunner()
@@ -108,7 +109,7 @@ class TestGenerate:
         mock_config.get.side_effect = lambda key, default=None: {
             "data.test.src": str(tmp_path / "src.db"),
             "data.test.dst": str(tmp_path / "dst.db"),
-            "data.test.schema": str(tmp_path / "cypher.json"),
+            "data.test.schema.cypher": str(tmp_path / "cypher.json"),
         }.get(key, default)
 
         schema_file = tmp_path / "cypher.json"
@@ -120,8 +121,11 @@ class TestGenerate:
 
         mock_llm_service = Mock()
         mock_client = Mock()
-        mock_response = Mock()
-        mock_response.content = "MATCH (n) RETURN n"
+        mock_response = LLMResponse(
+            message=LLMMessage.assistant("MATCH (n) RETURN n"),
+            usage=LLMUsage(input_tokens=10, output_tokens=5),
+            duration=0.5,
+        )
         mock_client.chat.return_value = mock_response
         mock_llm_service.get_client.return_value = mock_client
 

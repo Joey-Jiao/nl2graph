@@ -1,12 +1,14 @@
-from typing import Optional, Literal
+from typing import Optional
 from pathlib import Path
 
 import typer
 
 from ..base import get_context, ConfigService, LLMService, ModelService, TemplateService
 from ..data.repository import SourceRepository, ResultRepository
+from ..execution.schema import load_schema
 from ..execution.schema.base import BaseSchema
-from ..pipeline.inference import InferencePipeline, IfExists
+from ..pipeline.generate import GeneratePipeline, IfExists
+from ._helpers import load_records, detect_provider
 
 
 def generate(
@@ -31,21 +33,17 @@ def generate(
         typer.echo(f"Error: src.db not found. Run 'nl2graph init {dataset}' first.", err=True)
         raise typer.Exit(1)
 
-    provider = None
+    schema = None
+    template_service = None
+    template_name = None
+    translator = None
+
     if method == "llm":
-        provider = _detect_provider(model)
+        provider = detect_provider(model)
         if not provider:
             typer.echo(f"Error: Unknown model provider for '{model}'", err=True)
             raise typer.Exit(1)
 
-    generator = _create_generator(ctx, config, method, model, provider)
-    if generator is None:
-        raise typer.Exit(1)
-
-    template_service = None
-    template_name = None
-    schema = None
-    if method == "llm":
         template_service = ctx.resolve(TemplateService)
         available = template_service.ls_templates("prompts")
         if lang not in available:
@@ -58,104 +56,80 @@ def generate(
             typer.echo(f"Error: No schema configured for '{dataset}/{lang}'", err=True)
             raise typer.Exit(1)
 
-    translator = None
-    if ir:
-        try:
-            from graphq_trans import Translator
-            translator = Translator()
-        except ImportError:
-            typer.echo("Error: graphq-trans not installed for IR mode", err=True)
+        generator = _create_llm_generator(ctx, provider, model, template_service, template_name)
+
+    elif method == "seq2seq":
+        if ir:
+            try:
+                from graphq_trans import Translator
+                translator = Translator()
+            except ImportError:
+                typer.echo("Error: graphq-trans not installed for IR mode", err=True)
+                raise typer.Exit(1)
+
+        generator = _create_seq2seq_generator(ctx, config, model, translator, lang)
+        if generator is None:
             raise typer.Exit(1)
 
+    else:
+        typer.echo(f"Error: Unknown method '{method}'", err=True)
+        raise typer.Exit(1)
+
     with SourceRepository(src_path) as src, ResultRepository(dst_path) as dst:
-        records = _load_records(src, hop, split)
+        records = load_records(src, hop, split)
         typer.echo(f"Generating for {len(records)} records...")
 
-        pipeline = InferencePipeline(
+        pipeline = GeneratePipeline(
             generator=generator,
             dst=dst,
-            template_service=template_service,
-            template_name=template_name,
-            translator=translator,
             method=method,
             lang=lang,
             model=model,
-            ir_mode=ir,
-            extract_query=(method == "llm"),
             workers=workers,
             if_exists=if_exists,
         )
 
-        pipeline.generate(records, schema)
+        pipeline.run(records, schema)
 
     typer.echo("Done.")
 
 
-def _create_generator(ctx, config: ConfigService, method: str, model: str, provider: Optional[str] = None):
-    if method == "llm":
-        llm_service = ctx.resolve(LLMService)
-        from ..generation.llm.generation import Generation
-        return Generation(llm_service, provider, model)
+def _create_llm_generator(ctx, provider: str, model: str, template_service: TemplateService, template_name: str):
+    llm_service = ctx.resolve(LLMService)
+    from ..generation.llm.generation import Generation
+    return Generation(
+        llm_service=llm_service,
+        provider=provider,
+        model=model,
+        template_service=template_service,
+        template_name=template_name,
+        extract_query=True,
+    )
 
-    elif method == "seq2seq":
-        model_service = ctx.resolve(ModelService)
-        checkpoint_config = model_service.get_checkpoint_config(model)
-        if not checkpoint_config:
-            typer.echo(f"Error: Checkpoint '{model}' not found", err=True)
-            return None
 
-        checkpoint_path = model_service.get_checkpoint_path(model)
-        if not checkpoint_path or not checkpoint_path.exists():
-            typer.echo(f"Error: Checkpoint path not found: {checkpoint_path}", err=True)
-            return None
-
-        from ..generation.seq2seq.generation import Generation
-        return Generation(str(checkpoint_path), config)
-
-    else:
-        typer.echo(f"Error: Unknown method '{method}'", err=True)
+def _create_seq2seq_generator(ctx, config: ConfigService, model: str, translator, lang: str):
+    model_service = ctx.resolve(ModelService)
+    checkpoint_config = model_service.get_checkpoint_config(model)
+    if not checkpoint_config:
+        typer.echo(f"Error: Checkpoint '{model}' not found", err=True)
         return None
 
+    checkpoint_path = model_service.get_checkpoint_path(model)
+    if not checkpoint_path or not checkpoint_path.exists():
+        typer.echo(f"Error: Checkpoint path not found: {checkpoint_path}", err=True)
+        return None
 
-def _detect_provider(model: str) -> Optional[str]:
-    if model.startswith("gpt"):
-        return "openai"
-    elif model.startswith("deepseek"):
-        return "deepseek"
-    return None
+    from ..generation.seq2seq.generation import Generation
+    return Generation(
+        model_path=str(checkpoint_path),
+        config_service=config,
+        translator=translator,
+        lang=lang,
+    )
 
 
 def _load_schema(config: ConfigService, dataset: str, lang: str) -> Optional[BaseSchema]:
     schema_path = config.get(f"data.{dataset}.schema.{lang}")
     if not schema_path:
         return None
-
-    schema_path = Path(schema_path)
-    if not schema_path.exists():
-        return None
-
-    import json
-    with open(schema_path) as f:
-        data = json.load(f)
-
-    if lang == "sparql":
-        from ..execution.schema.sparql import SparqlSchema
-        return SparqlSchema.from_dict(data)
-    elif lang == "gremlin":
-        from ..execution.schema.gremlin import GremlinSchema
-        return GremlinSchema.from_dict(data)
-    else:
-        from ..execution.schema.cypher import CypherSchema
-        return CypherSchema.from_dict(data)
-
-
-def _load_records(src: SourceRepository, hop: Optional[int], split: Optional[str]):
-    filters = {}
-    if hop is not None:
-        filters["hop"] = hop
-    if split is not None:
-        filters["split"] = split
-
-    if filters:
-        return list(src.iter_by_filter(**filters))
-    return list(src.iter_all())
+    return load_schema(schema_path, lang)

@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from nl2graph.base.llm.entity import ClientConfig, LLMMessage
+from nl2graph.base.llm.entity import ClientConfig, LLMMessage, LLMUsage, LLMResponse
 from nl2graph.base.llm.clients.openai import OpenAIClient
 from nl2graph.base.llm.clients.deepseek import DeepSeekClient
 from nl2graph.base.configs import ConfigService
@@ -48,6 +48,32 @@ class TestLLMMessage:
         assert msg.content == "Hi there"
 
 
+class TestLLMUsage:
+
+    def test_create_default(self):
+        usage = LLMUsage()
+        assert usage.input_tokens == 0
+        assert usage.output_tokens == 0
+        assert usage.cached_tokens == 0
+
+    def test_create_with_values(self):
+        usage = LLMUsage(input_tokens=100, output_tokens=50, cached_tokens=20)
+        assert usage.input_tokens == 100
+        assert usage.output_tokens == 50
+        assert usage.cached_tokens == 20
+
+
+class TestLLMResponse:
+
+    def test_create(self):
+        msg = LLMMessage.assistant("Hello")
+        usage = LLMUsage(input_tokens=10, output_tokens=5)
+        response = LLMResponse(message=msg, usage=usage, duration=0.5)
+        assert response.message.content == "Hello"
+        assert response.usage.input_tokens == 10
+        assert response.duration == 0.5
+
+
 @pytest.fixture
 def config_service():
     config_file = Path(__file__).parent.parent.parent / "configs" / "configs.yaml"
@@ -72,10 +98,13 @@ class TestOpenAIClientReal:
         messages = [LLMMessage.user("Say 'hello' and nothing else")]
         result = client.chat(messages)
 
-        assert result.role == "assistant"
-        assert result.content is not None
-        assert len(result.content) > 0
-        print(f"\n[OpenAI Response]: {result.content}")
+        assert isinstance(result, LLMResponse)
+        assert result.message.role == "assistant"
+        assert result.message.content is not None
+        assert len(result.message.content) > 0
+        assert result.duration > 0
+        assert result.usage.input_tokens >= 0
+        print(f"\n[OpenAI Response]: {result.message.content}")
 
     def test_chat_cypher_generation(self, config_service):
         api_key = config_service.get_env("OPENAI_API_KEY")
@@ -95,9 +124,9 @@ class TestOpenAIClientReal:
         ]
         result = client.chat(messages)
 
-        assert result.role == "assistant"
-        assert result.content is not None
-        print(f"\n[OpenAI Cypher]: {result.content}")
+        assert result.message.role == "assistant"
+        assert result.message.content is not None
+        print(f"\n[OpenAI Cypher]: {result.message.content}")
 
 
 class TestDeepSeekClientReal:
@@ -118,10 +147,13 @@ class TestDeepSeekClientReal:
         messages = [LLMMessage.user("Say 'hello' and nothing else")]
         result = client.chat(messages)
 
-        assert result.role == "assistant"
-        assert result.content is not None
-        assert len(result.content) > 0
-        print(f"\n[DeepSeek Response]: {result.content}")
+        assert isinstance(result, LLMResponse)
+        assert result.message.role == "assistant"
+        assert result.message.content is not None
+        assert len(result.message.content) > 0
+        assert result.duration > 0
+        assert result.usage.input_tokens >= 0
+        print(f"\n[DeepSeek Response]: {result.message.content}")
 
     def test_chat_cypher_generation(self, config_service):
         api_key = config_service.get_env("DEEPSEEK_API_KEY")
@@ -142,6 +174,6 @@ class TestDeepSeekClientReal:
         ]
         result = client.chat(messages)
 
-        assert result.role == "assistant"
-        assert result.content is not None
-        print(f"\n[DeepSeek Cypher]: {result.content}")
+        assert result.message.role == "assistant"
+        assert result.message.content is not None
+        print(f"\n[DeepSeek Cypher]: {result.message.content}")

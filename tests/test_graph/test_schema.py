@@ -1,10 +1,10 @@
 import pytest
 
-from nl2graph.execution.schema.property_graph import (
+from nl2graph.execution.schema.cypher import (
     PropertySchema,
     NodeSchema,
     EdgeSchema,
-    PropertyGraphSchema,
+    CypherSchema,
 )
 
 
@@ -57,11 +57,11 @@ class TestEdgeSchema:
         assert len(edge.properties) == 1
 
 
-class TestPropertyGraphSchema:
+class TestCypherSchema:
 
     @pytest.fixture
     def sample_schema(self):
-        return PropertyGraphSchema(
+        return CypherSchema(
             name="TestGraph",
             nodes=[
                 NodeSchema(
@@ -110,7 +110,7 @@ class TestPropertyGraphSchema:
                 },
             ],
         }
-        schema = PropertyGraphSchema.from_dict(data)
+        schema = CypherSchema.from_dict(data)
         assert schema.name == "MyGraph"
         assert len(schema.nodes) == 1
         assert schema.nodes[0].label == "Person"
@@ -130,7 +130,7 @@ class TestPropertyGraphSchema:
                 },
             ],
         }
-        schema = PropertyGraphSchema.from_dict(data)
+        schema = CypherSchema.from_dict(data)
         assert len(schema.nodes) == 1
         assert schema.nodes[0].label == "Actor"
         assert len(schema.edges) == 1
@@ -151,12 +151,12 @@ class TestPropertyGraphSchema:
             ],
             "edges": [],
         }
-        schema = PropertyGraphSchema.from_dict(data)
+        schema = CypherSchema.from_dict(data)
         assert len(schema.nodes[0].properties) == 2
         assert schema.nodes[0].properties[0].name == "id"
 
     def test_empty_schema(self):
-        schema = PropertyGraphSchema(name="Empty")
+        schema = CypherSchema(name="Empty")
         assert schema.nodes == []
         assert schema.edges == []
         result = schema.to_prompt_string()

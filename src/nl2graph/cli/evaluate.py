@@ -6,7 +6,8 @@ import typer
 from ..base import get_context, ConfigService
 from ..evaluation import Scoring
 from ..data.repository import SourceRepository, ResultRepository
-from ..pipeline.inference import InferencePipeline, IfExists
+from ..pipeline.evaluate import EvaluatePipeline, IfExists
+from ._helpers import load_records
 
 
 def evaluate(
@@ -34,36 +35,18 @@ def evaluate(
         raise typer.Exit(1)
 
     with SourceRepository(src_path) as src, ResultRepository(dst_path) as dst:
-        records = _load_records(src, hop, split)
+        records = load_records(src, hop, split)
         typer.echo(f"Evaluating {len(records)} records...")
 
-        pipeline = InferencePipeline(
-            generator=_DummyGenerator(),
+        pipeline = EvaluatePipeline(
             dst=dst,
-            scoring=Scoring(),
             method=method,
             lang=lang,
             model=model,
+            scoring=Scoring(),
             if_exists=if_exists,
         )
 
-        pipeline.evaluate(records)
+        pipeline.run(records)
 
     typer.echo("Done.")
-
-
-class _DummyGenerator:
-    def generate(self, text: str) -> str:
-        return ""
-
-
-def _load_records(src: SourceRepository, hop: Optional[int], split: Optional[str]):
-    filters = {}
-    if hop is not None:
-        filters["hop"] = hop
-    if split is not None:
-        filters["split"] = split
-
-    if filters:
-        return list(src.iter_by_filter(**filters))
-    return list(src.iter_all())

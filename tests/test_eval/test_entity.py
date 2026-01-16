@@ -1,6 +1,7 @@
 import pytest
 
 from nl2graph.data.entity import (
+    GenerationOutput,
     GenerationResult,
     ExecutionResult,
     EvaluationResult,
@@ -9,15 +10,39 @@ from nl2graph.data.entity import (
 )
 
 
+class TestGenerationOutput:
+
+    def test_create_minimal(self):
+        output = GenerationOutput(content="MATCH (n) RETURN n")
+        assert output.content == "MATCH (n) RETURN n"
+        assert output.stats is None
+
+    def test_create_with_stats(self):
+        stats = {"duration": 0.5, "input_tokens": 10, "output_tokens": 5}
+        output = GenerationOutput(content="MATCH (n) RETURN n", stats=stats)
+        assert output.content == "MATCH (n) RETURN n"
+        assert output.stats["duration"] == 0.5
+        assert output.stats["input_tokens"] == 10
+        assert output.stats["output_tokens"] == 5
+
+
 class TestGenerationResult:
 
     def test_create_empty(self):
         result = GenerationResult()
         assert result.query is None
+        assert result.stats is None
 
     def test_create_with_values(self):
         result = GenerationResult(query="MATCH (n) RETURN n")
         assert result.query == "MATCH (n) RETURN n"
+
+    def test_create_with_stats(self):
+        stats = {"duration": 0.5, "input_tokens": 10}
+        result = GenerationResult(query="MATCH (n) RETURN n", stats=stats)
+        assert result.query == "MATCH (n) RETURN n"
+        assert result.stats["duration"] == 0.5
+        assert result.stats["input_tokens"] == 10
 
 
 class TestExecutionResult:
