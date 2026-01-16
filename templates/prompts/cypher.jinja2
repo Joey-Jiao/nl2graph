@@ -2,9 +2,8 @@ Translate the question to Cypher query based on the schema of a Neo4j knowledge 
 - Output the Cypher query in a single line, without any additional output or explanation. Do not wrap the query with any formatting like ```.
 - Perform graph pattern matching in the `MATCH` clause if possible.
 - Avoid listing the same entity multiple times in the results. However, if multiple distinct entities share the same name, their names should be repeated as separate entries.
-- Do not return node objects. Instead, return entity names or properties.
 
-Graph Schema:
+Knowledge Graph:
 {{ schema }}
 
 Question:

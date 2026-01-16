@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -22,8 +22,9 @@ class EdgeSchema(BaseModel):
     properties: List[PropertySchema] = []
 
 
-class CypherSchema(BaseSchema, BaseModel):
+class GremlinSchema(BaseSchema, BaseModel):
     name: str
+    return_hint: Optional[str] = None
     nodes: List[NodeSchema] = []
     edges: List[EdgeSchema] = []
 
@@ -31,16 +32,22 @@ class CypherSchema(BaseSchema, BaseModel):
         return self.model_dump()
 
     def to_prompt_string(self) -> str:
-        lines = [f"Graph: {self.name}", "", "Nodes:"]
+        lines = [f"Graph: {self.name}", ""]
+
+        if self.return_hint:
+            lines.append(f"Return: {self.return_hint}")
+            lines.append("")
+
+        lines.append("Vertices:")
         for node in sorted(self.nodes, key=lambda x: x.label):
             props = ", ".join(f"{p.name}: {p.data_type}" for p in node.properties)
-            lines.append(f"  ({node.label}) [{props}]" if props else f"  ({node.label})")
+            lines.append(f"  {node.label} [{props}]" if props else f"  {node.label}")
 
         lines.append("")
         lines.append("Edges:")
         for edge in sorted(self.edges, key=lambda x: x.label):
             props = ", ".join(f"{p.name}: {p.data_type}" for p in edge.properties)
-            edge_str = f"  (:{edge.source_label})-[:{edge.label}]->(:{edge.target_label})"
+            edge_str = f"  {edge.source_label} -[{edge.label}]-> {edge.target_label}"
             if props:
                 edge_str += f" [{props}]"
             lines.append(edge_str)
@@ -48,7 +55,7 @@ class CypherSchema(BaseSchema, BaseModel):
         return "\n".join(lines)
 
     @classmethod
-    def from_dict(cls, data: dict) -> "CypherSchema":
+    def from_dict(cls, data: dict) -> "GremlinSchema":
         nodes = []
         for n in data.get("nodes", []) or data.get("entities", []):
             props = []
@@ -74,4 +81,9 @@ class CypherSchema(BaseSchema, BaseModel):
                 properties=props,
             ))
 
-        return cls(name=data["name"], nodes=nodes, edges=edges)
+        return cls(
+            name=data["name"],
+            return_hint=data.get("return_hint"),
+            nodes=nodes,
+            edges=edges,
+        )

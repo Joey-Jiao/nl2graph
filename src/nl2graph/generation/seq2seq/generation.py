@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, BartForConditionalGeneration
 
 from ...base import ConfigService
 from ...data import GenerationOutput
-from ...execution.schema.base import BaseSchema
+from ...data.schema.base import BaseSchema
 
 
 class Generation:

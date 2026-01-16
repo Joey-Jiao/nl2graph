@@ -147,7 +147,7 @@ class TestBuildPrompt:
     def test_build_prompt_with_template(self, tmp_path):
         from nl2graph.base.templates.service import TemplateService
         from nl2graph.base.configs import ConfigService
-        from nl2graph.execution.schema.cypher import CypherSchema, NodeSchema
+        from nl2graph.data.schema.cypher import CypherSchema, NodeSchema
 
         prompts_dir = tmp_path / "templates" / "prompts"
         prompts_dir.mkdir(parents=True)

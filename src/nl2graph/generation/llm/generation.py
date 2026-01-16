@@ -3,7 +3,7 @@ from typing import Optional
 
 from ...base import LLMService, LLMMessage, TemplateService
 from ...data import GenerationOutput
-from ...execution.schema.base import BaseSchema
+from ...data.schema.base import BaseSchema
 
 
 class Generation:

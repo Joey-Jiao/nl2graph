@@ -1,6 +1,6 @@
 import pytest
 
-from nl2graph.execution.schema.cypher import (
+from nl2graph.data.schema.cypher import (
     PropertySchema,
     NodeSchema,
     EdgeSchema,

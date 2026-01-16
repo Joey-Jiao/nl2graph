@@ -2,9 +2,8 @@ Translate the question to SPARQL query based on the schema of an RDF knowledge g
 - Output the SPARQL query in a single line, without any additional output or explanation. Do not wrap the query with any formatting like ```.
 - Use triple patterns in the `WHERE` clause and return results with `SELECT`.
 - Avoid listing the same entity multiple times in the results. However, if multiple distinct entities share the same name, their names should be repeated as separate entries.
-- Do not return URIs directly. Instead, return human-readable labels or literal values.
 
-Graph Schema:
+Knowledge Graph:
 {{ schema }}
 
 Question:

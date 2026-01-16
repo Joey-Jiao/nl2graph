@@ -5,8 +5,8 @@ import typer
 
 from ..base import get_context, ConfigService, LLMService, ModelService, TemplateService
 from ..data.repository import SourceRepository, ResultRepository
-from ..execution.schema import load_schema
-from ..execution.schema.base import BaseSchema
+from ..data.schema import load_schema
+from ..data.schema.base import BaseSchema
 from ..pipeline.generate import GeneratePipeline, IfExists
 from ._helpers import load_records, detect_provider
 

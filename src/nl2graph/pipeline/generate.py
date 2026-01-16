@@ -5,7 +5,7 @@ from tqdm import tqdm
 
 from ..data import Record, GenerationOutput, GenerationResult
 from ..data.repository import ResultRepository
-from ..execution.schema.base import BaseSchema
+from ..data.schema.base import BaseSchema
 
 
 @runtime_checkable

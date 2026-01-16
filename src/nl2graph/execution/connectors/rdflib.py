@@ -1,8 +1,7 @@
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 from pathlib import Path
 
 from ..entity import QueryLanguage
-from ..schema.sparql import SparqlSchema, ClassSchema, PropertyDef
 from ..result.entity import QueryResult
 from ..result.converter import convert_rdf_value
 from .base import BaseConnector
@@ -71,77 +70,3 @@ class RDFLibConnector(BaseConnector):
             )
 
         return QueryResult(columns=[], rows=[], raw=result)
-
-    def get_schema(self) -> SparqlSchema:
-        from rdflib import RDF, RDFS, OWL
-
-        prefixes = {}
-        for prefix, uri in self._graph.namespaces():
-            if prefix:
-                prefixes[prefix] = str(uri)
-
-        classes = []
-        for cls in self._graph.subjects(RDF.type, RDFS.Class):
-            label = self._graph.value(cls, RDFS.label)
-            parent = self._graph.value(cls, RDFS.subClassOf)
-            classes.append(ClassSchema(
-                uri=str(cls),
-                label=str(label) if label else None,
-                parent=str(parent) if parent else None,
-            ))
-
-        for cls in self._graph.subjects(RDF.type, OWL.Class):
-            if not any(c.uri == str(cls) for c in classes):
-                label = self._graph.value(cls, RDFS.label)
-                parent = self._graph.value(cls, RDFS.subClassOf)
-                classes.append(ClassSchema(
-                    uri=str(cls),
-                    label=str(label) if label else None,
-                    parent=str(parent) if parent else None,
-                ))
-
-        properties = []
-        for prop in self._graph.subjects(RDF.type, RDF.Property):
-            label = self._graph.value(prop, RDFS.label)
-            domain = self._graph.value(prop, RDFS.domain)
-            range_val = self._graph.value(prop, RDFS.range)
-            properties.append(PropertyDef(
-                uri=str(prop),
-                label=str(label) if label else None,
-                domain=str(domain) if domain else None,
-                range=str(range_val) if range_val else None,
-                is_object_property=False,
-            ))
-
-        for prop in self._graph.subjects(RDF.type, OWL.ObjectProperty):
-            if not any(p.uri == str(prop) for p in properties):
-                label = self._graph.value(prop, RDFS.label)
-                domain = self._graph.value(prop, RDFS.domain)
-                range_val = self._graph.value(prop, RDFS.range)
-                properties.append(PropertyDef(
-                    uri=str(prop),
-                    label=str(label) if label else None,
-                    domain=str(domain) if domain else None,
-                    range=str(range_val) if range_val else None,
-                    is_object_property=True,
-                ))
-
-        for prop in self._graph.subjects(RDF.type, OWL.DatatypeProperty):
-            if not any(p.uri == str(prop) for p in properties):
-                label = self._graph.value(prop, RDFS.label)
-                domain = self._graph.value(prop, RDFS.domain)
-                range_val = self._graph.value(prop, RDFS.range)
-                properties.append(PropertyDef(
-                    uri=str(prop),
-                    label=str(label) if label else None,
-                    domain=str(domain) if domain else None,
-                    range=str(range_val) if range_val else None,
-                    is_object_property=False,
-                ))
-
-        return SparqlSchema(
-            name=self.name,
-            prefixes=prefixes,
-            classes=classes,
-            properties=properties,
-        )

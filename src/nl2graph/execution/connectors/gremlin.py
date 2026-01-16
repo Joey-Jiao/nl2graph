@@ -1,7 +1,6 @@
 from typing import Optional, TYPE_CHECKING
 
 from ..entity import QueryLanguage
-from ..schema.gremlin import GremlinSchema, NodeSchema, EdgeSchema, PropertySchema
 from ..result.entity import QueryResult
 from ..result.converter import convert_gremlin_value
 from .base import BaseConnector
@@ -75,40 +74,3 @@ class GremlinConnector(BaseConnector):
 
         columns = list(rows[0].keys()) if rows else []
         return QueryResult(columns=columns, rows=rows, raw=raw_results)
-
-    def get_schema(self) -> GremlinSchema:
-        from gremlin_python.process.graph_traversal import __
-
-        vertex_labels = self._g.V().label().dedup().toList()
-
-        nodes = []
-        for label in vertex_labels:
-            props = self._g.V().hasLabel(label).properties().key().dedup().toList()
-            properties = [PropertySchema(name=p, data_type="any") for p in props]
-            nodes.append(NodeSchema(label=label, properties=properties))
-
-        edge_labels = self._g.E().label().dedup().toList()
-
-        edges = []
-        seen = set()
-        for label in edge_labels:
-            edge_info = (
-                self._g.E()
-                .hasLabel(label)
-                .project("src", "tgt")
-                .by(__.outV().label())
-                .by(__.inV().label())
-                .dedup()
-                .toList()
-            )
-            for info in edge_info:
-                key = (label, info["src"], info["tgt"])
-                if key not in seen:
-                    seen.add(key)
-                    edges.append(EdgeSchema(
-                        label=label,
-                        source_label=info["src"],
-                        target_label=info["tgt"],
-                    ))
-
-        return GremlinSchema(name=self.name, nodes=nodes, edges=edges)

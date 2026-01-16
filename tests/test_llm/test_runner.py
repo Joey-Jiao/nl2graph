@@ -12,7 +12,7 @@ from nl2graph.base.configs import ConfigService
 from nl2graph.data import Record, Result, GenerationResult, ExecutionResult
 from nl2graph.evaluation import Scoring
 from nl2graph.data.repository import ResultRepository
-from nl2graph.execution.schema.cypher import CypherSchema, NodeSchema, EdgeSchema, PropertySchema
+from nl2graph.data.schema.cypher import CypherSchema, NodeSchema, EdgeSchema, PropertySchema
 
 
 @pytest.fixture
