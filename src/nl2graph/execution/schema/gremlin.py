@@ -34,15 +34,15 @@ class GremlinSchema(BaseSchema, BaseModel):
         lines = [f"Graph: {self.name}", "", "Vertices:"]
         for node in sorted(self.nodes, key=lambda x: x.label):
             props = ", ".join(f"{p.name}: {p.data_type}" for p in node.properties)
-            lines.append(f"  {node.label}: {props}" if props else f"  {node.label}")
+            lines.append(f"  {node.label} [{props}]" if props else f"  {node.label}")
 
         lines.append("")
         lines.append("Edges:")
         for edge in sorted(self.edges, key=lambda x: x.label):
             props = ", ".join(f"{p.name}: {p.data_type}" for p in edge.properties)
-            edge_str = f"  {edge.label}: {edge.source_label} -> {edge.target_label}"
+            edge_str = f"  {edge.source_label} -[{edge.label}]-> {edge.target_label}"
             if props:
-                edge_str += f" ({props})"
+                edge_str += f" [{props}]"
             lines.append(edge_str)
 
         return "\n".join(lines)

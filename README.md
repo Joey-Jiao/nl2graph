@@ -71,15 +71,233 @@ nl2graph
     └── resource: datasets | models | checkpoints | templates
 ```
 
-## Examples
+## Methods
 
-```bash
-nl2graph init metaqa
-nl2graph generate metaqa -m llm --model gpt-4o -l cypher
-nl2graph execute metaqa -m llm --model gpt-4o -l cypher
-nl2graph evaluate metaqa -m llm --model gpt-4o -l cypher
-nl2graph report metaqa -m llm --model gpt-4o -l cypher
+The framework supports two generation methods: **LLM** (prompt-based) and **Seq2Seq** (fine-tuned BART).
+
+### LLM Method
+
+Prompt-based generation using commercial or open-source LLMs.
+
+**Processing Pipeline:**
+
 ```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              LLM Generation                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐                  │
+│  │ Schema JSON │ ──── │ from_dict() │ ──── │ Schema      │                  │
+│  │ (file)      │      │             │      │ Object      │                  │
+│  └─────────────┘      └─────────────┘      └──────┬──────┘                  │
+│                                                   │                         │
+│                                          to_prompt_string()                 │
+│                                                   │                         │
+│                                                   ▼                         │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐                  │
+│  │ Question    │ ──── │ Jinja2      │ ◄─── │ Schema      │                  │
+│  │ (text)      │      │ Template    │      │ String      │                  │
+│  └─────────────┘      └──────┬──────┘      └─────────────┘                  │
+│                              │                                              │
+│                              ▼                                              │
+│                       ┌─────────────┐                                       │
+│                       │ Prompt      │                                       │
+│                       │ (text)      │                                       │
+│                       └──────┬──────┘                                       │
+│                              │                                              │
+│                         LLM API                                             │
+│                              │                                              │
+│                              ▼                                              │
+│                       ┌─────────────┐      ┌─────────────┐                  │
+│                       │ Raw Output  │ ──── │ Extract     │                  │
+│                       │ (text)      │      │ Query       │                  │
+│                       └─────────────┘      └──────┬──────┘                  │
+│                                                   │                         │
+│                                                   ▼                         │
+│                                            ┌─────────────┐                  │
+│                                            │ Query       │                  │
+│                                            │ (cypher/    │                  │
+│                                            │  sparql/    │                  │
+│                                            │  gremlin)   │                  │
+│                                            └─────────────┘                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Input:**
+- `question`: Natural language question
+- `schema`: Graph schema JSON file (converted to structured text)
+
+**Output:**
+- `query`: Generated graph query
+- `stats`: Token usage and latency
+
+**Schema Processing:**
+
+Schema JSON is NOT passed directly to LLM. It undergoes transformation:
+
+```
+schema.json                    CypherSchema.to_prompt_string()
+─────────────────────────────  ─────────────────────────────────────
+{                              Graph: MovieDB
+  "name": "MovieDB",
+  "nodes": [                   Nodes:
+    {                            (Movie) [title: string]
+      "label": "Movie",          (Person) [name: string]
+      "properties": {
+        "title": "string"      Edges:
+      }                          (:Person)-[:ACTED_IN]->(:Movie)
+    },                           (:Person)-[:DIRECTED]->(:Movie)
+    {
+      "label": "Person",
+      "properties": {
+        "name": "string"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "label": "ACTED_IN",
+      "source_label": "Person",
+      "target_label": "Movie"
+    },
+    {
+      "label": "DIRECTED",
+      "source_label": "Person",
+      "target_label": "Movie"
+    }
+  ]
+}
+```
+
+**SPARQL Schema Example:**
+
+```
+schema.json                              SparqlSchema.to_prompt_string()
+───────────────────────────────────────  ─────────────────────────────────────
+{                                        RDF Graph: MovieDB
+  "name": "MovieDB",
+  "prefixes": {                          Prefixes:
+    "": "http://example.org/",             : <http://example.org/>
+    "rdfs": "http://...rdf-schema#"        rdfs: <http://...rdf-schema#>
+  },
+  "classes": [                           Classes:
+    {"uri": ":Person"},                    :Movie
+    {"uri": ":Movie"}                      :Person
+  ],
+  "properties": [                        Properties:
+    {                                      :actedIn domain=:Person range=:Movie [ObjectProperty]
+      "uri": ":actedIn",                   :directed domain=:Person range=:Movie [ObjectProperty]
+      "domain": ":Person",                 :name domain=:Person range=xsd:string [DatatypeProperty]
+      "range": ":Movie",                   :title domain=:Movie range=xsd:string [DatatypeProperty]
+      "is_object_property": true
+    },
+    ...
+  ]
+}
+```
+
+**Gremlin Schema Example:**
+
+```
+schema.json                    GremlinSchema.to_prompt_string()
+─────────────────────────────  ─────────────────────────────────────
+{                              Graph: MovieDB
+  "name": "MovieDB",
+  "nodes": [                   Vertices:
+    {                            Movie [title: string]
+      "label": "Movie",          Person [name: string]
+      "properties": {...}
+    },                         Edges:
+    ...                          Person -[ACTED_IN]-> Movie
+  ],                             Person -[DIRECTED]-> Movie
+  "edges": [
+    {
+      "label": "ACTED_IN",
+      "source_label": "Person",
+      "target_label": "Movie"
+    },
+    ...
+  ]
+}
+```
+
+### Seq2Seq Method
+
+Fine-tuned BART model for direct question-to-query translation.
+
+**Processing Pipeline:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            Seq2Seq Generation                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌─────────────┐      ┌─────────────┐      ┌─────────────┐                  │
+│  │ Question    │ ──── │ Tokenizer   │ ──── │ Input IDs   │                  │
+│  │ (text)      │      │             │      │ (tensor)    │                  │
+│  └─────────────┘      └─────────────┘      └──────┬──────┘                  │
+│                                                   │                         │
+│                                              BART Model                     │
+│                                                   │                         │
+│                                                   ▼                         │
+│                                            ┌─────────────┐                  │
+│                                            │ Output IDs  │                  │
+│                                            │ (tensor)    │                  │
+│                                            └──────┬──────┘                  │
+│                                                   │                         │
+│                                              Tokenizer                      │
+│                                               Decode                        │
+│                                                   │                         │
+│                                                   ▼                         │
+│                       ┌───────────────────────────────────────────┐         │
+│                       │                                           │         │
+│                       ▼                                           ▼         │
+│  [IR Mode OFF]  ┌─────────────┐          [IR Mode ON]  ┌─────────────┐      │
+│                 │ Query       │                        │ IR          │      │
+│                 │ (cypher/    │                        │ (graphq-ir) │      │
+│                 │  sparql)    │                        └──────┬──────┘      │
+│                 └─────────────┘                               │             │
+│                                                          Translator         │
+│                                                               │             │
+│                                                               ▼             │
+│                                                        ┌─────────────┐      │
+│                                                        │ Query       │      │
+│                                                        │ (cypher/    │      │
+│                                                        │  sparql/    │      │
+│                                                        │  kopl)      │      │
+│                                                        └─────────────┘      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Input:**
+- `question`: Natural language question
+- `schema`: NOT used (schema knowledge is embedded during training)
+
+**Output:**
+- `query`: Generated graph query (or IR if `--ir` mode)
+
+**IR Mode:**
+
+When `--ir` flag is enabled, the model outputs an intermediate representation (GraphQ-IR) which is then translated to the target query language:
+
+```
+Question ──► BART ──► GraphQ-IR ──► Translator ──► Query
+                                         │
+                         ┌───────────────┼───────────────┐
+                         ▼               ▼               ▼
+                    to_cypher()    to_sparql()     to_kopl()
+```
+
+### Method Comparison
+
+| Aspect | LLM | Seq2Seq |
+|--------|-----|---------|
+| Schema | Required (runtime) | Not used (training-time) |
+| Model | API-based (GPT, DeepSeek) | Local (fine-tuned BART) |
+| Training | None | Required |
+| Latency | Higher (API call) | Lower (local inference) |
+| Cost | Per-token billing | One-time training |
+| Flexibility | High (prompt engineering) | Low (retraining needed) |
 
 ## Data Flow
 
@@ -91,7 +309,7 @@ src.db (read-only)                    dst.db (read-write)
 │  - question     │──── generate ────►│  - method      ─┼─ composite key    │
 │  - answer       │                   │  - lang        ─┤                   │
 │  - extra        │                   │  - model       ─┘                   │
-└─────────────────┘                   │  - gen:  {query}                    │
+└─────────────────┘                   │  - gen:  {query, stats}             │
         │                             │  - exec: {result, success, error}   │
         │                             │  - eval: {exact_match, f1, ...}     │
         │                             └─────────────────────────────────────┘
@@ -113,14 +331,14 @@ src.db (read-only)                    dst.db (read-write)
 
 **dst.db** (read-write) - Experiment results
 
-| Table: `data` | Type | Description |
-|---------------|------|-------------|
-| `question_id` | TEXT | ┐ |
-| `method` | TEXT | │ Composite |
-| `lang` | TEXT | │ Primary Key |
-| `model` | TEXT | ┘ |
-| `gen` | TEXT | JSON: {query} |
-| `exec` | TEXT | JSON: {result, success, error} |
+| Table: `data` | Type | Description                                |
+|---------------|------|--------------------------------------------|
+| `question_id` | TEXT | ┐                                          |
+| `method` | TEXT | │ Composite                                |
+| `lang` | TEXT | │ Primary Key                              |
+| `model` | TEXT | ┘                                          |
+| `gen` | TEXT | JSON: {query, stats}                       |
+| `exec` | TEXT | JSON: {result, success, error}             |
 | `eval` | TEXT | JSON: {exact_match, f1, precision, recall} |
 
 The composite key `(question_id, method, lang, model)` allows multiple experiment results for the same question.
@@ -131,24 +349,20 @@ The composite key `(question_id, method, lang, model)` allows multiple experimen
 
 | Dataset | Model | Lang | Schema | Data | Server | Gen | Exec | Eval | Acc | F1 |
 |---------|-------|------|:------:|:----:|:------:|:---:|:----:|:----:|----:|---:|
-| metaqa | deepseek-chat | cypher |  [x]   | [x] |  [x]   | [x] | [x] | [x] | 78.8% | 80.9% |
-| metaqa | deepseek-chat | sparql |  [ ]   | [x] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| metaqa | deepseek-chat | gremlin |  [ ]   | [x] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| metaqa | deepseek-reasoner | cypher |  [x]   | [x] |  [x]   | [x] | [x] | [x] | 82.2% | 86.6% |
-| metaqa | deepseek-reasoner | sparql |  [ ]   | [x] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| metaqa | deepseek-reasoner | gremlin |  [ ]   | [x] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-chat | cypher |  [ ]   | [ ] |  [x]   | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-chat | sparql |  [ ]   | [ ] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-chat | gremlin |  [ ]   | [ ] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-reasoner | cypher |  [ ]   | [ ] |  [x]   | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-reasoner | sparql |  [ ]   | [ ] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| openreview | deepseek-reasoner | gremlin |  [ ]   | [ ] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-chat | cypher |  [ ]   | [ ] | [N/A]  | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-chat | sparql |  [ ]   | [x] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-chat | gremlin |  [ ]   | [ ] | [N/A]  | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-reasoner | cypher |  [ ]   | [ ] | [N/A]  | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-reasoner | sparql |  [ ]   | [x] |  [ ]   | [ ] | [ ] | [ ] | - | - |
-| webqsp | deepseek-reasoner | gremlin |  [ ]   | [ ] | [N/A]  | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-chat | cypher |  [x]   | [x]  |  [x]   | [x] | [x] | [x] | 78.8% | 80.9% |
+| metaqa | deepseek-chat | sparql |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-chat | gremlin |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-reasoner | cypher |  [x]   | [x]  |  [x]   | [x] | [x] | [x] | 82.2% | 86.6% |
+| metaqa | deepseek-reasoner | sparql |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| metaqa | deepseek-reasoner | gremlin |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | cypher |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | sparql |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-chat | gremlin |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | cypher |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | sparql |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| openreview | deepseek-reasoner | gremlin |  [x]   | [ ]  |  [x]   | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-chat | sparql |  [ ]   | [x]  |  [ ]   | [ ] | [ ] | [ ] | - | - |
+| webqsp | deepseek-reasoner | sparql |  [ ]   | [x]  |  [ ]   | [ ] | [ ] | [ ] | - | - |
 
 ### GraphQ_IR
 
@@ -160,6 +374,4 @@ The composite key `(question_id, method, lang, model)` allows multiple experimen
 | openreview | cypher |         [ ]         |      [x]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
 | openreview | sparql |         [ ]         |      [ ]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
 | openreview | gremlin |         [ ]         |      [ ]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
-| webqsp | cypher |    [Challenging]    | [Infeasible] | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
 | webqsp | sparql |         [ ]         |      [ ]      | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
-| webqsp | gremlin |    [Challenging]    | [Infeasible]  | [x] | [ ] | [ ] | [ ] | [ ] | - | - |
