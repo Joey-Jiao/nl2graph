@@ -8,6 +8,7 @@ from .evaluate import evaluate
 from .train import train
 from .report import report
 from .clear import clear
+from .server import server_app
 
 app = typer.Typer(
     name="nl2graph",
@@ -24,3 +25,4 @@ app.command()(evaluate)
 app.command()(train)
 app.command()(report)
 app.command()(clear)
+app.add_typer(server_app, name="server")

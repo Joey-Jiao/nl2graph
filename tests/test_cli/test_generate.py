@@ -108,10 +108,10 @@ class TestGenerate:
         mock_config.get.side_effect = lambda key, default=None: {
             "data.test.src": str(tmp_path / "src.db"),
             "data.test.dst": str(tmp_path / "dst.db"),
-            "data.test.schema": str(tmp_path / "schema_cypher.json"),
+            "data.test.schema": str(tmp_path / "cypher.json"),
         }.get(key, default)
 
-        schema_file = tmp_path / "schema_cypher.json"
+        schema_file = tmp_path / "cypher.json"
         schema_file.write_text(json.dumps({
             "name": "test",
             "entities": [{"label": "Node", "properties": {"name": "str"}}],

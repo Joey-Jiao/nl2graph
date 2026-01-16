@@ -12,7 +12,7 @@ nl2graph
 ├── generate <dataset>                Generate queries from questions
 │   ├── -m, --method <llm|seq2seq>    Generation method (required)
 │   ├── --model <name>                Model name (required)
-│   ├── -l, --lang <lang>             Query language: cypher, sparql, kopl (required)
+│   ├── -l, --lang <lang>             Query language: cypher, sparql, gremlin (required)
 │   ├── [--ir]                        Enable IR mode (seq2seq)
 │   ├── [--hop <n>]                   Filter by hop
 │   ├── [--split <name>]              Filter by split
@@ -57,6 +57,15 @@ nl2graph
 │   ├── --model <name>                Model name (required)
 │   ├── -l, --lang <lang>             Query language (required)
 │   └── [-s, --stage <gen|exec|eval>] Stage to clear (default: gen, cascades)
+│
+├── server                            Manage graph database servers
+│   ├── start <dataset>               Start server (docker-compose up)
+│   │   ├── -l, --lang <lang>         Query language (required)
+│   │   └── [-t, --timeout <sec>]     Startup timeout (default: 60)
+│   ├── stop <dataset>                Stop server (docker-compose down)
+│   │   └── -l, --lang <lang>         Query language (required)
+│   └── status <dataset>              Check server status
+│       └── -l, --lang <lang>         Query language (required)
 │
 └── ls <resource>                     List resources
     └── resource: datasets | models | checkpoints | templates

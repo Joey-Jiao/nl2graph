@@ -37,12 +37,14 @@ class GremlinConnector(BaseConnector):
         return self._g
 
     def execute(self, query: str, timeout: Optional[int] = None) -> QueryResult:
-        result = eval(query, {"g": self._g})
+        traversal = eval(query, {"g": self._g})
 
-        if hasattr(result, "toList"):
-            raw_results = result.toList()
+        if hasattr(traversal, "toList"):
+            raw_results = traversal.toList()
+        elif hasattr(traversal, "next"):
+            raw_results = [traversal.next()]
         else:
-            raw_results = [result]
+            raw_results = [traversal]
 
         rows = []
         for item in raw_results:

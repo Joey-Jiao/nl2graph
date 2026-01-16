@@ -16,6 +16,9 @@ class LLMService:
             self._config[provider_name] = {}
             model_config = config.get(f"llm.{provider_name}", {})
 
+            if not model_config:
+                continue
+
             for model_name, _ in model_config.items():
                 provider_name_upper = provider_name.upper()
                 api_key = config.get_env(f"{provider_name_upper}_API_KEY", default=None)

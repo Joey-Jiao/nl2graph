@@ -18,8 +18,6 @@ llm:
     deepseek-reasoner:
       timeout: 30
       endpoint: https://api.deepseek.com
-  together:
-
 
 templates:
   prompts: "templates/prompts"
@@ -75,8 +73,8 @@ data:
       processed: "data/kqapro/eval/processed"
 
   metaqa:
-    src: "data/metaqa/src.db"
-    dst: "data/metaqa/dst.db"
+    src: "data/metaqa/storage/src.db"
+    dst: "data/metaqa/storage/dst.db"
     train:
       raw: "data/metaqa/train/raw"
       processed: "data/metaqa/train/processed"
@@ -91,9 +89,9 @@ data:
         - hop
         - split
     schema:
-      cypher: "data/metaqa/schema_cypher.json"
-      sparql: "data/metaqa/schema_sparql.json"
-      gremlin: "data/metaqa/schema_gremlin.json"
+      cypher: "data/metaqa/schema/cypher.json"
+      sparql: "data/metaqa/schema/sparql.json"
+      gremlin: "data/metaqa/schema/gremlin.json"
     connection:
       cypher:
         host: localhost
@@ -103,10 +101,17 @@ data:
         database: neo4j
         sanity:
           - lowercase_relationships
+      sparql:
+        data_path: "data/metaqa/server/sparql/metaqa.ttl"
+        data_format: "turtle"
+      gremlin:
+        host: localhost
+        port: 8182
+        docker_compose: "data/metaqa/server/gremlin/docker-compose.yml"
 
   openreview:
-    src: "data/openreview/src.db"
-    dst: "data/openreview/dst.db"
+    src: "data/openreview/storage/src.db"
+    dst: "data/openreview/storage/dst.db"
     train:
       raw: "data/openreview/train/raw"
       processed: "data/openreview/train/processed"
@@ -115,7 +120,9 @@ data:
       raw: "data/openreview/eval/raw"
       processed: "data/openreview/eval/processed"
     schema:
-      default: "data/openreview/schema_cypher.json"
+      cypher: "data/openreview/schema/cypher.json"
+      sparql: "data/openreview/schema/sparql.json"
+      gremlin: "data/openreview/schema/gremlin.json"
     connection:
       cypher:
         host: localhost
@@ -123,6 +130,13 @@ data:
         username: neo4j
         password: OpenReviewNeo4j
         database: neo4j
+      sparql:
+        data_path: "data/openreview/server/sparql/openreview.ttl"
+        data_format: "turtle"
+      gremlin:
+        host: localhost
+        port: 8183
+        docker_compose: "data/openreview/server/gremlin/docker-compose.yml"
 
 
 
