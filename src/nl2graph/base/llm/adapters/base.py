@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 
-from ..entity import LLMMessage
+from ..entity import LLMMessage, LLMUsage
 
 
 class BaseAdapter(ABC):
@@ -11,6 +11,10 @@ class BaseAdapter(ABC):
 
     @abstractmethod
     def extract_chat_message(self, resp) -> LLMMessage:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def extract_usage(self, resp) -> LLMUsage:
         raise NotImplementedError()
 
     def to_embedding(self, text: str) -> Any:

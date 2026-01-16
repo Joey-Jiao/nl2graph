@@ -5,6 +5,7 @@ import torch
 from transformers import AutoTokenizer, BartForConditionalGeneration
 
 from ...base import ConfigService
+from ...data import GenerationOutput
 
 
 class Generation:
@@ -40,7 +41,7 @@ class Generation:
         self.model = self.model.to(self.device)
         self.model.eval()
 
-    def generate(self, text: str, max_length: Optional[int] = None) -> str:
+    def generate(self, text: str, max_length: Optional[int] = None) -> GenerationOutput:
         max_length = max_length or self.max_length
         encoded = self.tokenizer(
             text,
@@ -60,8 +61,9 @@ class Generation:
                 max_length=max_length,
             )
 
-        return self.tokenizer.decode(
+        content = self.tokenizer.decode(
             outputs[0],
             skip_special_tokens=True,
             clean_up_tokenization_spaces=False,
         )
+        return GenerationOutput(content=content)

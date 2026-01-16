@@ -1,4 +1,4 @@
 from .service import LLMService
-from .entity import LLMMessage
+from .entity import LLMMessage, LLMResponse, LLMUsage
 
-__all__ = ["LLMService", "LLMMessage"]
+__all__ = ["LLMService", "LLMMessage", "LLMResponse", "LLMUsage"]

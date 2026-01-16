@@ -1,4 +1,5 @@
 from .entity import (
+    GenerationOutput,
     GenerationResult,
     ExecutionResult,
     EvaluationResult,
@@ -8,6 +9,7 @@ from .entity import (
 from .repository import SourceRepository, ResultRepository
 
 __all__ = [
+    "GenerationOutput",
     "GenerationResult",
     "ExecutionResult",
     "EvaluationResult",

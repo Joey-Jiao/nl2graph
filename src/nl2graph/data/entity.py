@@ -1,10 +1,18 @@
-from typing import List, Optional, Any, Literal
+from dataclasses import dataclass
+from typing import List, Optional, Any, Literal, Dict
 
 from pydantic import BaseModel, ConfigDict
 
 
+@dataclass
+class GenerationOutput:
+    content: str
+    stats: Optional[Dict[str, Any]] = None
+
+
 class GenerationResult(BaseModel):
     query: Optional[str] = None
+    stats: Optional[Dict[str, Any]] = None
 
 
 class ExecutionResult(BaseModel):

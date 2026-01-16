@@ -13,6 +13,18 @@ class ClientConfig(BaseModel):
     timeout: int = Field(30, description="timeout in seconds")
 
 
+class LLMUsage(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cached_tokens: int = 0
+
+
+class LLMResponse(BaseModel):
+    message: "LLMMessage"
+    usage: LLMUsage
+    duration: float
+
+
 class LLMMessage(BaseModel):
     role: RoleType
     content: str

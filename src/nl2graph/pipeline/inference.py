@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from tqdm import tqdm
 
-from ..data import Record, GenerationResult, ExecutionResult, ResultRepository
+from ..data import Record, GenerationOutput, GenerationResult, ExecutionResult, ResultRepository
 from ..execution import Execution
 from ..evaluation import Scoring
 from ..base import TemplateService
@@ -14,7 +14,7 @@ from ..execution.schema.base import BaseSchema
 @runtime_checkable
 class Generator(Protocol):
 
-    def generate(self, text: str) -> str: ...
+    def generate(self, text: str) -> GenerationOutput: ...
 
 
 IfExists = Literal["skip", "override"]
@@ -106,12 +106,13 @@ class InferencePipeline:
             self._generate_parallel(inputs)
         else:
             for record, prompt in tqdm(inputs, desc="Generating"):
-                raw = self.generator.generate(prompt)
-                self._save_one(record, raw)
+                output = self.generator.generate(prompt)
+                self._save_one(record, output)
 
         return records
 
-    def _save_one(self, record: Record, raw: str) -> None:
+    def _save_one(self, record: Record, output: GenerationOutput) -> None:
+        raw = output.content
         if self.translator and self.ir_mode:
             query = self._translate_ir(raw)
         elif self.extract_query:
@@ -119,7 +120,7 @@ class InferencePipeline:
         else:
             query = raw
 
-        gen = GenerationResult(query=query)
+        gen = GenerationResult(query=query, stats=output.stats)
         self.dst.save_generation(record.id, self.method, self.lang, self.model, gen)
 
     def _generate_parallel(self, inputs: List[tuple[Record, str]]) -> None:
@@ -130,8 +131,8 @@ class InferencePipeline:
             }
             for future in tqdm(as_completed(future_to_record), total=len(inputs), desc="Generating"):
                 record = future_to_record[future]
-                raw = future.result()
-                self._save_one(record, raw)
+                output = future.result()
+                self._save_one(record, output)
 
     def execute(self, records: List[Record]) -> List[Record]:
         has_gen = [r for r in records if self.dst.exists(r.id, self.method, self.lang, self.model)]
