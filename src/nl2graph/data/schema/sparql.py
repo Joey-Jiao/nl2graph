@@ -21,8 +21,7 @@ class PropertyDef(BaseModel):
 
 class SparqlSchema(BaseSchema, BaseModel):
     name: str
-    return_hint: Optional[str] = None
-    entity_rule: Optional[str] = None
+    extra: Dict[str, str] = {}
     prefixes: Dict[str, str] = {}
     classes: List[ClassSchema] = []
     properties: List[PropertyDef] = []
@@ -33,12 +32,8 @@ class SparqlSchema(BaseSchema, BaseModel):
     def to_prompt_string(self) -> str:
         lines = [f"RDF Graph: {self.name}", ""]
 
-        if self.return_hint:
-            lines.append(f"Return: {self.return_hint}")
-            lines.append("")
-
-        if self.entity_rule:
-            lines.append(f"Entity Rule: {self.entity_rule}")
+        for key, value in self.extra.items():
+            lines.append(f"{key.capitalize()}: {value}")
             lines.append("")
 
         if self.prefixes:
@@ -91,8 +86,7 @@ class SparqlSchema(BaseSchema, BaseModel):
 
         return cls(
             name=data["name"],
-            return_hint=data.get("return_hint"),
-            entity_rule=data.get("entity_rule"),
+            extra=data.get("extra", {}),
             prefixes=data.get("prefixes", {}),
             classes=classes,
             properties=properties,

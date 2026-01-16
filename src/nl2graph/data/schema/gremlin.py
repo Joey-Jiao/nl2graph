@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Dict
 
 from pydantic import BaseModel
 
@@ -24,7 +24,7 @@ class EdgeSchema(BaseModel):
 
 class GremlinSchema(BaseSchema, BaseModel):
     name: str
-    return_hint: Optional[str] = None
+    extra: Dict[str, str] = {}
     nodes: List[NodeSchema] = []
     edges: List[EdgeSchema] = []
 
@@ -34,8 +34,8 @@ class GremlinSchema(BaseSchema, BaseModel):
     def to_prompt_string(self) -> str:
         lines = [f"Graph: {self.name}", ""]
 
-        if self.return_hint:
-            lines.append(f"Return: {self.return_hint}")
+        for key, value in self.extra.items():
+            lines.append(f"{key.capitalize()}: {value}")
             lines.append("")
 
         lines.append("Vertices:")
@@ -83,7 +83,7 @@ class GremlinSchema(BaseSchema, BaseModel):
 
         return cls(
             name=data["name"],
-            return_hint=data.get("return_hint"),
+            extra=data.get("extra", {}),
             nodes=nodes,
             edges=edges,
         )

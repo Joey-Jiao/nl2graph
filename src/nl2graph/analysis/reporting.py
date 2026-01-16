@@ -40,8 +40,22 @@ class Reporting:
         sum_precision = 0.0
         sum_recall = 0.0
 
+        total_duration = 0.0
+        total_input_tokens = 0
+        total_output_tokens = 0
+        total_cached_tokens = 0
+        gen_count = 0
+
         for _, result in pairs:
             total += 1
+
+            if result.gen and result.gen.stats:
+                stats = result.gen.stats
+                total_duration += stats.get("duration", 0.0)
+                total_input_tokens += stats.get("input_tokens", 0)
+                total_output_tokens += stats.get("output_tokens", 0)
+                total_cached_tokens += stats.get("cached_tokens", 0)
+                gen_count += 1
 
             if not result.exec or not result.exec.success:
                 error_count += 1
@@ -62,6 +76,14 @@ class Reporting:
             avg_f1=sum_f1 / valid if valid > 0 else 0.0,
             avg_precision=sum_precision / valid if valid > 0 else 0.0,
             avg_recall=sum_recall / valid if valid > 0 else 0.0,
+            total_duration=total_duration,
+            avg_duration=total_duration / gen_count if gen_count > 0 else 0.0,
+            total_input_tokens=total_input_tokens,
+            total_output_tokens=total_output_tokens,
+            total_cached_tokens=total_cached_tokens,
+            avg_input_tokens=total_input_tokens / gen_count if gen_count > 0 else 0.0,
+            avg_output_tokens=total_output_tokens / gen_count if gen_count > 0 else 0.0,
+            avg_cached_tokens=total_cached_tokens / gen_count if gen_count > 0 else 0.0,
         )
 
     def _compute_by_field(self, pairs: List[Tuple[Record, Result]], field: str) -> Dict[str, GroupStats]:

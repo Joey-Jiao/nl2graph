@@ -11,6 +11,15 @@ class GroupStats(BaseModel):
     avg_precision: float = 0.0
     avg_recall: float = 0.0
 
+    total_duration: float = 0.0
+    avg_duration: float = 0.0
+    total_input_tokens: int = 0
+    total_output_tokens: int = 0
+    total_cached_tokens: int = 0
+    avg_input_tokens: float = 0.0
+    avg_output_tokens: float = 0.0
+    avg_cached_tokens: float = 0.0
+
 
 class ErrorAnalysis(BaseModel):
     total_errors: int = 0

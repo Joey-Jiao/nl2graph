@@ -17,6 +17,8 @@ dependencies = [
     "python-dotenv",
     "jinja2",
     "neo4j",
+    "rdflib",
+    "gremlinpython",
     "openai",
     "torch",
     "transformers",

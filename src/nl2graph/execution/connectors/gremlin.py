@@ -6,7 +6,7 @@ from ..result.converter import convert_gremlin_value
 from .base import BaseConnector
 
 if TYPE_CHECKING:
-    from gremlin_python.process.graph_traversal import GraphTraversalSource
+    from gremlin_python.driver.client import Client
 
 
 class GremlinConnector(BaseConnector):
@@ -14,55 +14,22 @@ class GremlinConnector(BaseConnector):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._connection = None
-        self._g: Optional["GraphTraversalSource"] = None
+        self._client: Optional["Client"] = None
 
     def connect(self) -> None:
-        from gremlin_python.driver.driver_remote_connection import DriverRemoteConnection
-        from gremlin_python.process.anonymous_traversal import traversal
+        from gremlin_python.driver.client import Client
 
         url = f"ws://{self.host}:{self.port}/gremlin"
-        self._connection = DriverRemoteConnection(url, "g")
-        self._g = traversal().withRemote(self._connection)
+        self._client = Client(url, "g")
 
     def close(self) -> None:
-        if self._connection:
-            self._connection.close()
-            self._connection = None
-            self._g = None
-
-    @property
-    def g(self) -> "GraphTraversalSource":
-        return self._g
+        if self._client:
+            self._client.close()
+            self._client = None
 
     def execute(self, query: str, timeout: Optional[int] = None) -> QueryResult:
-        traversal = eval(query, {"g": self._g})
-
-        if hasattr(traversal, "toList"):
-            raw_results = traversal.toList()
-        elif hasattr(traversal, "next"):
-            raw_results = [traversal.next()]
-        else:
-            raw_results = [traversal]
-
-        rows = []
-        for item in raw_results:
-            converted = convert_gremlin_value(item)
-            if isinstance(converted, dict):
-                rows.append(converted)
-            else:
-                rows.append({"value": converted})
-
-        columns = list(rows[0].keys()) if rows else []
-        return QueryResult(columns=columns, rows=rows, raw=raw_results)
-
-    def execute_traversal(self, traversal_func) -> QueryResult:
-        result = traversal_func(self._g)
-
-        if hasattr(result, "toList"):
-            raw_results = result.toList()
-        else:
-            raw_results = [result]
+        result_set = self._client.submit(query)
+        raw_results = result_set.all().result()
 
         rows = []
         for item in raw_results:

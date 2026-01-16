@@ -164,28 +164,33 @@ def _stop_gremlin(config: ConfigService, dataset: str, connection: dict):
 
 
 def _load_gremlin_data(config: ConfigService, dataset: str, connection: dict):
-    container_name = f"janusgraph-{dataset}"
+    from gremlin_python.driver.client import Client
+
+    script_path = connection.get("load_script")
+    if not script_path:
+        script_path = f"data/{dataset}/server/gremlin/load.groovy"
+
+    script_file = Path(script_path)
+    if not script_file.exists():
+        typer.echo(f"Warning: Load script not found at {script_path}", err=True)
+        return
+
+    host = connection.get("host", "localhost")
+    port = connection.get("port", 8182)
 
     typer.echo("Loading data into JanusGraph...")
 
-    result = subprocess.run(
-        [
-            "docker", "exec", container_name,
-            "bin/gremlin.sh", "-e", "/opt/janusgraph/scripts/load.groovy"
-        ],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        client = Client(f"ws://{host}:{port}/gremlin", "g")
+        script_content = script_file.read_text()
+        result = client.submit(script_content).all().result()
+        client.close()
 
-    if result.returncode != 0:
-        typer.echo(f"Warning: Failed to load data", err=True)
-        typer.echo(result.stderr, err=True)
-    else:
         typer.echo("Data loaded successfully.")
-        if result.stdout:
-            for line in result.stdout.strip().split("\n"):
-                if line.strip():
-                    typer.echo(f"  {line}")
+        for item in result:
+            typer.echo(f"  {item}")
+    except Exception as e:
+        typer.echo(f"Warning: Failed to load data: {e}", err=True)
 
 
 def _check_port(host: str, port: int) -> bool:
