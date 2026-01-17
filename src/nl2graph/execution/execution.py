@@ -1,6 +1,7 @@
 from typing import List, Any
 
 from .connectors.base import BaseConnector
+from ..base.timeout import with_timeout
 from ..data.entity import Result, ExecutionResult
 
 
@@ -9,6 +10,7 @@ class Execution:
     def __init__(self, connector: BaseConnector):
         self.connector = connector
 
+    @with_timeout("execution.timeout")
     def execute(self, result: Result) -> ExecutionResult:
         if not result.gen or not result.gen.query:
             return ExecutionResult(

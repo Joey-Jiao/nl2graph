@@ -2,6 +2,7 @@ import re
 from typing import Optional
 
 from ...base import LLMService, LLMMessage, TemplateService
+from ...base.timeout import with_timeout
 from ...data import GenerationOutput
 from ...data.schema.base import BaseSchema
 
@@ -24,6 +25,7 @@ class Generation:
         self.template_name = template_name
         self.extract_query = extract_query
 
+    @with_timeout("generation.llm.timeout")
     def generate(self, question: str, schema: Optional[BaseSchema] = None) -> GenerationOutput:
         if self.template_service and self.template_name and schema:
             prompt = self._build_prompt(question, schema)

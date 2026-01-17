@@ -5,18 +5,27 @@ log:
   rotation: "200 MB"
   retention: "14 days"
 
+execution:
+  timeout: 180
+
+generation:
+  llm:
+    timeout: 180
+  seq2seq:
+    timeout: 180
+
 llm:
   openai:
     gpt-4o-mini:
-      timeout: 60
+      timeout: 180
     gpt-4o:
-      timeout: 60
+      timeout: 180
   deepseek:
     deepseek-chat:
-      timeout: 30
+      timeout: 180
       endpoint: https://api.deepseek.com
     deepseek-reasoner:
-      timeout: 30
+      timeout: 180
       endpoint: https://api.deepseek.com
 
 templates:

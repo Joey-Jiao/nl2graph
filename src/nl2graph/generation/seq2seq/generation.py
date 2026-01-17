@@ -5,6 +5,7 @@ import torch
 from transformers import AutoTokenizer, BartForConditionalGeneration
 
 from ...base import ConfigService
+from ...base.timeout import with_timeout
 from ...data import GenerationOutput
 from ...data.schema.base import BaseSchema
 
@@ -46,6 +47,7 @@ class Generation:
         self.model = self.model.to(self.device)
         self.model.eval()
 
+    @with_timeout("generation.seq2seq.timeout")
     def generate(self, question: str, schema: Optional[BaseSchema] = None) -> GenerationOutput:
         encoded = self.tokenizer(
             question,

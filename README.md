@@ -352,9 +352,9 @@ The composite key `(question_id, method, lang, model)` allows multiple experimen
 | metaqa | deepseek-chat | cypher |  [x]   | [x]  |  [x]   | [x] | [x]  | [x]  | 80.6% | 82.8% |
 | metaqa | deepseek-chat | sparql |  [x]   | [x]  |  [x]   | [x] | [ ]  | [ ]  | - | - |
 | metaqa | deepseek-chat | gremlin |  [x]   | [x]  |  [x]   | [x] | [x]  | [x]  | 53.6% | 64.7% |
-| metaqa | deepseek-reasoner | cypher |  [x]   | [x]  |  [x]   | [x] | [x]  | [x]  | 82.2% | 86.6% |
-| metaqa | deepseek-reasoner | sparql |  [x]   | [x]  |  [x]   | [ ] | [ ]  | [ ]  | - | - |
-| metaqa | deepseek-reasoner | gremlin |  [x]   | [x]  |  [x]   | [ ] | [ ]  | [ ]  | - | - |
+| metaqa | deepseek-reasoner | cypher |  [x]   | [x]  |  [x]   | [x] | [x]  | [x]  | 85.0% | 90.9% |
+| metaqa | deepseek-reasoner | sparql |  [x]   | [x]  |  [x]   | [x] | [ ]  | [ ]  | - | - |
+| metaqa | deepseek-reasoner | gremlin |  [x]   | [x]  |  [x]   | [x] | [ ]  | [ ]  | - | - |
 | openreview | deepseek-chat | cypher |  [x]   | [ ]  |  [x]   | [ ] | [ ]  | [ ]  | - | - |
 | openreview | deepseek-chat | sparql |  [x]   | [ ]  |  [x]   | [ ] | [ ]  | [ ]  | - | - |
 | openreview | deepseek-chat | gremlin |  [x]   | [ ]  |  [x]   | [ ] | [ ]  | [ ]  | - | - |
